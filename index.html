@@ -1,5 +1,11 @@
 <!doctype html>
+<html manifest="webrepl.appcache">
+
+<head>
 <title>MicroPython WebREPL</title>
+<link rel="icon" type="image/png" href="favicon.png" sizes=144x144>
+<link rel="apple-touch-icon" href="favicon.png" sizes="144x144">
+
 <!--
   term.js
   Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)
@@ -32,7 +38,8 @@
 */
 </style>
 <script src="term.js"></script>
-<html>
+</head>
+
 <body>
 <input type="text" id="url" value="ws://192.168.4.1:8080/" />
 <input type="button" id="button" value="Connect" onclick="button_click()" />
