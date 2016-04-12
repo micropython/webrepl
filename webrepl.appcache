@@ -2,4 +2,8 @@ CACHE MANIFEST
 webrepl.appcache
 index.html
 term.js
+favicon.png
+
+NETWORK:
+*
 
