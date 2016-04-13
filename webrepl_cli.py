@@ -14,7 +14,7 @@ USE_BUILTIN_WEBSOCKET = 0
 SANDBOX = "/tmp/webrepl/"
 
 
-WEBREPL_FILE = "3sBBBHQH64s"
+WEBREPL_FILE = "<3sBBBHQH64s"
 
 if USE_BUILTIN_WEBSOCKET:
     from websocket import websocket
@@ -66,7 +66,7 @@ else:
 
 def read_resp(ws):
     data = ws.read(4)
-    sig, code = struct.unpack("2sH", data)
+    sig, code = struct.unpack("<2sH", data)
     assert sig == b"WB"
     return code
 
