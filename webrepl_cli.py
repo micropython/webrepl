@@ -37,14 +37,21 @@ else:
 
         def read(self, sz):
             if not self.buf:
-                hdr = self.s.recv(2)
-                assert len(hdr) == 2
-                fl, sz = struct.unpack(">BB", hdr)
-                assert fl == 0x82
-                if sz == 126:
+                while True:
                     hdr = self.s.recv(2)
                     assert len(hdr) == 2
-                    (sz,) = struct.unpack(">H", hdr)
+                    fl, sz = struct.unpack(">BB", hdr)
+                    if sz == 126:
+                        hdr = self.s.recv(2)
+                        assert len(hdr) == 2
+                        (sz,) = struct.unpack(">H", hdr)
+                    if fl == 0x82:
+                        break
+                    print("Got unexpected websocket record of type %x, skipping it" % fl)
+                    while sz:
+                        skip = self.s.recv(sz)
+                        print("Skip data:", skip)
+                        sz -= len(skip)
                 data = self.s.recv(sz)
                 assert len(data) == sz
                 self.buf = data
