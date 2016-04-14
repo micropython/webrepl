@@ -45,7 +45,7 @@ else:
                 sz -= len(data)
             return res
 
-        def read(self, sz):
+        def read(self, size):
             if not self.buf:
                 while True:
                     hdr = self.recvexactly(2)
@@ -66,8 +66,9 @@ else:
                 assert len(data) == sz
                 self.buf = data
 
-            d = self.buf[:sz]
-            self.buf = self.buf[sz:]
+            d = self.buf[:size]
+            self.buf = self.buf[size:]
+            assert len(d) == size, len(d)
             return d
 
         def ioctl(self, req, val):
