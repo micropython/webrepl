@@ -35,14 +35,24 @@ else:
             self.s.send(hdr)
             self.s.send(data)
 
+        def recvexactly(self, sz):
+            res = b""
+            while sz:
+                data = self.s.recv(sz)
+                if not data:
+                    break
+                res += data
+                sz -= len(data)
+            return res
+
         def read(self, sz):
             if not self.buf:
                 while True:
-                    hdr = self.s.recv(2)
+                    hdr = self.recvexactly(2)
                     assert len(hdr) == 2
                     fl, sz = struct.unpack(">BB", hdr)
                     if sz == 126:
-                        hdr = self.s.recv(2)
+                        hdr = self.recvexactly(2)
                         assert len(hdr) == 2
                         (sz,) = struct.unpack(">H", hdr)
                     if fl == 0x82:
@@ -52,7 +62,7 @@ else:
                         skip = self.s.recv(sz)
                         print("Skip data:", skip)
                         sz -= len(skip)
-                data = self.s.recv(sz)
+                data = self.recvexactly(sz)
                 assert len(data) == sz
                 self.buf = data
 
