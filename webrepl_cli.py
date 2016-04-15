@@ -119,7 +119,7 @@ def get_file(ws, local_file, remote_file):
 
 
 def help(rc=0):
-    exename = sys.argv[0].rsplit("/", 1)[1]
+    exename = sys.argv[0].rsplit("/", 1)[-1]
     print("%s - Perform remote file operations using MicroPython WebREPL protocol" % exename)
     print("Arguments:")
     print("  <host>:<remote_file> <local_file> - Copy remote file to local file")
