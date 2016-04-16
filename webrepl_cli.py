@@ -15,7 +15,7 @@ SANDBOX = "."
 #SANDBOX = "/tmp/webrepl/"
 
 
-WEBREPL_FILE = "<3sBBBHQH64s"
+WEBREPL_FILE = "<2sBBQLH64s"
 
 if USE_BUILTIN_WEBSOCKET:
     from websocket import websocket
@@ -85,7 +85,7 @@ def read_resp(ws):
 def put_file(ws, local_file, remote_file):
     sz = os.stat(local_file)[6]
     dest_fname = bytes(SANDBOX + remote_file, "utf-8")
-    rec = struct.pack(WEBREPL_FILE, b"WRA", 1, 0, 0, sz, 0, len(dest_fname), dest_fname)
+    rec = struct.pack(WEBREPL_FILE, b"WA", 1, 0, 0, sz, len(dest_fname), dest_fname)
     print(rec, len(rec))
     ws.write(rec[:10])
     ws.write(rec[10:])
@@ -100,7 +100,7 @@ def put_file(ws, local_file, remote_file):
 
 def get_file(ws, local_file, remote_file):
     src_fname = bytes(SANDBOX + remote_file, "utf-8")
-    rec = struct.pack(WEBREPL_FILE, b"WRA", 2, 0, 0, 0, 0, len(src_fname), src_fname)
+    rec = struct.pack(WEBREPL_FILE, b"WA", 2, 0, 0, 0, len(src_fname), src_fname)
     print(rec, len(rec))
     ws.write(rec)
     assert read_resp(ws) == 0
