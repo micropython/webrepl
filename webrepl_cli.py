@@ -92,7 +92,7 @@ def put_file(ws, local_file, remote_file):
     assert read_resp(ws) == 0
     with open(local_file, "rb") as f:
         while True:
-            buf = f.read(256)
+            buf = f.read(1024)
             if not buf:
                 break
             ws.write(buf)
