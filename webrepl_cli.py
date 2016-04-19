@@ -11,7 +11,7 @@ import websocket_helper
 # Define to 1 to use builtin "websocket" module of MicroPython
 USE_BUILTIN_WEBSOCKET = 0
 # Treat this remote directory as a root for file transfers
-SANDBOX = "."
+SANDBOX = ""
 #SANDBOX = "/tmp/webrepl/"
 
 
