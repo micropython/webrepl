@@ -13,9 +13,15 @@ USE_BUILTIN_WEBSOCKET = 0
 # Treat this remote directory as a root for file transfers
 SANDBOX = ""
 #SANDBOX = "/tmp/webrepl/"
-
+DEBUG = 0
 
 WEBREPL_FILE = "<2sBBQLH64s"
+
+
+def debugmsg(msg):
+    if DEBUG:
+        print(msg)
+
 
 if USE_BUILTIN_WEBSOCKET:
     from websocket import websocket
@@ -58,10 +64,10 @@ else:
                         (sz,) = struct.unpack(">H", hdr)
                     if fl == 0x82:
                         break
-                    print("Got unexpected websocket record of type %x, skipping it" % fl)
+                    debugmsg("Got unexpected websocket record of type %x, skipping it" % fl)
                     while sz:
                         skip = self.s.recv(sz)
-                        print("Skip data:", skip)
+                        debugmsg("Skip data: %s" % skip)
                         sz -= len(skip)
                 data = self.recvexactly(sz)
                 assert len(data) == sz
