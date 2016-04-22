@@ -142,7 +142,7 @@ def error(msg):
 
 def parse_remote(remote):
     host, fname = remote.rsplit(":", 1)
-    if fname = "":
+    if fname == "":
         fname = "/"
     port = 8266
     if ":" in host:
