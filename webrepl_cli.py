@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import sys
 import os
 import struct
@@ -90,7 +91,7 @@ def read_resp(ws):
 
 def put_file(ws, local_file, remote_file):
     sz = os.stat(local_file)[6]
-    dest_fname = bytes(SANDBOX + remote_file, "utf-8")
+    dest_fname = (SANDBOX + remote_file).encode("utf-8")
     rec = struct.pack(WEBREPL_FILE, b"WA", 1, 0, 0, sz, len(dest_fname), dest_fname)
     print(rec, len(rec))
     ws.write(rec[:10])
@@ -105,7 +106,7 @@ def put_file(ws, local_file, remote_file):
     assert read_resp(ws) == 0
 
 def get_file(ws, local_file, remote_file):
-    src_fname = bytes(SANDBOX + remote_file, "utf-8")
+    src_fname = (SANDBOX + remote_file).encode("utf-8")
     rec = struct.pack(WEBREPL_FILE, b"WA", 2, 0, 0, 0, len(src_fname), src_fname)
     print(rec, len(rec))
     ws.write(rec)
