@@ -36,8 +36,10 @@
 <script src="term.js"></script>
 </head>
 <body>
-<input type="text" id="url" value="ws://192.168.4.1:8266/" />
-<input type="button" id="button" value="Connect" onclick="button_click()" />
+<form>
+<input type="text" name="webrepl_url" id="url" value="ws://192.168.4.1:8266/" />
+<input type="submit" id="button" value="Connect" onclick="button_click(); return false;" />
+</form>
 <div id="term">
 </div>
 <br clear="both" />
