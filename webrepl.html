@@ -90,6 +90,8 @@ function connect(url) {
             document.title = title;
         });
 
+        term.focus();
+        term.element.focus();
         term.write('\x1b[31mWelcome to MicroPython!\x1b[m\r\n');
 
         ws.onmessage = function(event) {
