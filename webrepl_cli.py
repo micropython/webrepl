@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 import os
 import struct
+import getpass
 try:
     import usocket as socket
 except ImportError:
@@ -53,7 +54,7 @@ else:
                 sz -= len(data)
             return res
 
-        def read(self, size):
+        def read(self, size, text_ok=False):
             if not self.buf:
                 while True:
                     hdr = self.recvexactly(2)
@@ -64,6 +65,8 @@ else:
                         assert len(hdr) == 2
                         (sz,) = struct.unpack(">H", hdr)
                     if fl == 0x82:
+                        break
+                    if text_ok and fl == 0x81:
                         break
                     debugmsg("Got unexpected websocket record of type %x, skipping it" % fl)
                     while sz:
@@ -82,6 +85,16 @@ else:
         def ioctl(self, req, val):
             assert req == 9 and val == 2
 
+
+def login(ws):
+    while True:
+        c = ws.read(1, text_ok=True)
+        print(c)
+        if c == b":":
+            assert ws.read(1, text_ok=True) == b" "
+            break
+    passwd = getpass.getpass()
+    ws.write(passwd + b"\r")
 
 def read_resp(ws):
     data = ws.read(4)
@@ -190,6 +203,9 @@ def main():
     websocket_helper.client_handshake(s)
 
     ws = websocket(s)
+
+    login(ws)
+
     # Set websocket to send data marked as "binary"
     ws.ioctl(9, 2)
 
