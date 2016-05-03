@@ -89,12 +89,11 @@ else:
 def login(ws):
     while True:
         c = ws.read(1, text_ok=True)
-        print(c)
         if c == b":":
             assert ws.read(1, text_ok=True) == b" "
             break
     passwd = getpass.getpass()
-    ws.write(passwd + b"\r")
+    ws.write(passwd.encode("utf-8") + b"\r")
 
 def read_resp(ws):
     data = ws.read(4)
