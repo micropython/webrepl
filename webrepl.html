@@ -54,17 +54,28 @@ var term;
 var ws;
 var connected = false;
 
+function calculate_size(win) {
+    var cols = Math.max(80, Math.min(150, (win.innerWidth - 40) / 7)) | 0;
+    var rows = Math.max(24, Math.min(80, (win.innerHeight - 180) / 12)) | 0;
+    return [cols, rows];
+}
+
 (function() {
     window.onload = function() {
+      var size = calculate_size(self);
       term = new Terminal({
-        cols: 80,
-        rows: 24,
+        cols: size[0],
+        rows: size[1],
         useStyle: true,
         screenKeys: true,
         cursorBlink: false
       });
       term.open(document.getElementById("term"));
-    }
+    };
+    window.addEventListener('resize', function() {
+        var size = calculate_size(self);
+        term.resize(size[0], size[1]);
+    });
 }).call(this);
 
 function button_click() {
