@@ -39,6 +39,8 @@
 <form>
 <input type="text" name="webrepl_url" id="url" value="ws://192.168.4.1:8266/" />
 <input type="submit" id="button" value="Connect" onclick="button_click(); return false;" />
+<input type="button" value="Upload" onclick="put_file(); return false;" />
+<input type="button" value="Download" onclick="get_file(); return false;" />
 </form>
 <div id="term">
 </div>
@@ -53,6 +55,7 @@
 var term;
 var ws;
 var connected = false;
+var binary_state = 0;
 
 function calculate_size(win) {
     var cols = Math.max(80, Math.min(150, (win.innerWidth - 40) / 7)) | 0;
@@ -96,6 +99,7 @@ function prepare_for_connect() {
 
 function connect(url) {
     ws = new WebSocket(url);
+    ws.binaryType = 'arraybuffer';
     ws.onopen = function() {
         term.removeAllListeners('data');
         term.on('data', function(data) {
@@ -114,6 +118,61 @@ function connect(url) {
         term.write('\x1b[31mWelcome to MicroPython!\x1b[m\r\n');
 
         ws.onmessage = function(event) {
+            if (event.data instanceof ArrayBuffer) {
+                var data = new Uint8Array(event.data);
+                console.log('ws data:', data);
+                switch (binary_state) {
+                    case 11:
+                        // first response for put
+                        if (decode_resp(data) == 0) {
+                            // send file data
+                            ws.send(new Uint8Array([64,64,64,64,64,64,64,64,64,10]));
+                            binary_state = 12;
+                        }
+                        break;
+                    case 12:
+                        // final response for put
+                        if (decode_resp(data) == 0) {
+                            console.log('success!');
+                        } else {
+                            console.log('fail');
+                        }
+                        binary_state = 0;
+                        break;
+
+                    case 21:
+                        // first response for get
+                        if (decode_resp(data) == 0) {
+                            binary_state = 22;
+                        }
+                        break;
+                    case 22: {
+                        // file data
+                        var sz = data[0] | (data[1] << 8);
+                        if (data.length == 2 + sz) {
+                            // we assume that the data comes in single chunks
+                            if (sz == 0) {
+                                // end of file
+                                binary_state = 23;
+                            } else {
+                                console.log('file data:', data);
+                            }
+                        } else {
+                            binary_state = 0;
+                        }
+                        break;
+                    }
+                    case 23:
+                        // final response
+                        if (decode_resp(data) == 0) {
+                            console.log('success!');
+                        } else {
+                            console.log('fail');
+                        }
+                        binary_state = 0;
+                        break;
+                }
+            }
             term.write(event.data);
         };
     };
@@ -126,6 +185,67 @@ function connect(url) {
         prepare_for_connect();
     }
 }
+
+function decode_resp(data) {
+    if (data[0] == 'W'.charCodeAt(0) && data[1] == 'B'.charCodeAt(0)) {
+        var code = data[2] | (data[3] << 8);
+        return code;
+    } else {
+        return -1;
+    }
+}
+
+function put_file() {
+    var dest_fname = 'test2.txt';
+    var dest_fsize = 10;
+
+    // WEBREPL_FILE = "<2sBBQLH64s"
+    var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
+    rec[0] = 'W'.charCodeAt(0);
+    rec[1] = 'A'.charCodeAt(0);
+    rec[2] = 1; // put
+    rec[3] = 0;
+    rec[4] = 0; rec[5] = 0; rec[6] = 0; rec[7] = 0; rec[8] = 0; rec[9] = 0; rec[10] = 0; rec[11] = 0;
+    rec[12] = dest_fsize & 0xff; rec[13] = (dest_fsize >> 8) & 0xff; rec[14] = (dest_fsize >> 16) & 0xff; rec[15] = (dest_fsize >> 24) & 0xff;
+    rec[16] = dest_fname.length & 0xff; rec[17] = (dest_fname.length >> 8) & 0xff;
+    for (var i = 0; i < 64; ++i) {
+        if (i < dest_fname.length) {
+            rec[18 + i] = dest_fname.charCodeAt(i);
+        } else {
+            rec[18 + i] = 0;
+        }
+    }
+
+    // initiate put
+    binary_state = 11;
+    ws.send(rec);
+}
+
+function get_file() {
+    var src_fname = 'test.txt';
+
+    // WEBREPL_FILE = "<2sBBQLH64s"
+    var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
+    rec[0] = 'W'.charCodeAt(0);
+    rec[1] = 'A'.charCodeAt(0);
+    rec[2] = 2; // get
+    rec[3] = 0;
+    rec[4] = 0; rec[5] = 0; rec[6] = 0; rec[7] = 0; rec[8] = 0; rec[9] = 0; rec[10] = 0; rec[11] = 0;
+    rec[12] = 0; rec[13] = 0; rec[14] = 0; rec[15] = 0;
+    rec[16] = src_fname.length & 0xff; rec[17] = (src_fname.length >> 8) & 0xff;
+    for (var i = 0; i < 64; ++i) {
+        if (i < src_fname.length) {
+            rec[18 + i] = src_fname.charCodeAt(i);
+        } else {
+            rec[18 + i] = 0;
+        }
+    }
+
+    // initiate get
+    binary_state = 21;
+    ws.send(rec);
+}
+
 </script>
 
 </html>
