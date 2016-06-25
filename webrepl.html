@@ -32,18 +32,46 @@
     background: #f0f0f0;
   }
 */
+
+  .file-box {
+    margin: 4px;
+    padding: 4px;
+    background: #888;
+  }
 </style>
 <script src="term.js"></script>
+<script src="FileSaver.js"></script>
 </head>
 <body>
+
+<div style="display:inline-block; vertical-align:top;">
 <form>
 <input type="text" name="webrepl_url" id="url" value="ws://192.168.4.1:8266/" />
 <input type="submit" id="button" value="Connect" onclick="button_click(); return false;" />
-<input type="button" value="Upload" onclick="put_file(); return false;" />
-<input type="button" value="Download" onclick="get_file(); return false;" />
 </form>
 <div id="term">
 </div>
+</div>
+
+<div id="file-boxes" style="display:inline-block; vertical-align:top; width:230px;">
+
+  <div class="file-box">
+    <strong>Send a file</strong>
+    <input type="file" id="put-file-select" />
+    <div id="put-file-list"></div>
+    <input type="button" value="Send to device" id="put-file-button" onclick="put_file(); return false;" />
+  </div>
+
+  <div class="file-box">
+    <strong>Get a file</strong>
+    <input type="text" name="get_filename" id="get_filename" value="" size="13" />
+    <input type="button" value="Get from device" onclick="get_file(); return false;" />
+  </div>
+
+  <div class="file-box" id="file-status"></div>
+
+</div>
+
 <br clear="both" />
 <i>Terminal widget should be focused (text cursor visible) to accept input. Click on it if not.</i><br/>
 <i>To paste, press Ctrl+A, then Ctrl+V</i>
@@ -56,9 +84,13 @@ var term;
 var ws;
 var connected = false;
 var binary_state = 0;
+var put_file_name = null;
+var put_file_data = null;
+var get_file_name = null;
+var get_file_data = null;
 
 function calculate_size(win) {
-    var cols = Math.max(80, Math.min(150, (win.innerWidth - 40) / 7)) | 0;
+    var cols = Math.max(80, Math.min(150, (win.innerWidth - 280) / 7)) | 0;
     var rows = Math.max(24, Math.min(80, (win.innerHeight - 180) / 12)) | 0;
     return [cols, rows];
 }
@@ -97,6 +129,10 @@ function prepare_for_connect() {
     document.getElementById('button').value = "Connect";
 }
 
+function update_file_status(s) {
+    document.getElementById('file-status').innerHTML = s;
+}
+
 function connect(url) {
     ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
@@ -120,22 +156,23 @@ function connect(url) {
         ws.onmessage = function(event) {
             if (event.data instanceof ArrayBuffer) {
                 var data = new Uint8Array(event.data);
-                console.log('ws data:', data);
                 switch (binary_state) {
                     case 11:
                         // first response for put
                         if (decode_resp(data) == 0) {
-                            // send file data
-                            ws.send(new Uint8Array([64,64,64,64,64,64,64,64,64,10]));
+                            // send file data in chunks
+                            for (var offset = 0; offset < put_file_data.length; offset += 1024) {
+                                ws.send(put_file_data.slice(offset, offset + 1024));
+                            }
                             binary_state = 12;
                         }
                         break;
                     case 12:
                         // final response for put
                         if (decode_resp(data) == 0) {
-                            console.log('success!');
+                            update_file_status('Sent ' + put_file_name + ', ' + put_file_data.length + ' bytes');
                         } else {
-                            console.log('fail');
+                            update_file_status('Failed sending ' + put_file_name);
                         }
                         binary_state = 0;
                         break;
@@ -155,7 +192,12 @@ function connect(url) {
                                 // end of file
                                 binary_state = 23;
                             } else {
-                                console.log('file data:', data);
+                                // accumulate incoming data to get_file_data
+                                var new_buf = new Uint8Array(get_file_data.length + sz);
+                                new_buf.set(get_file_data);
+                                new_buf.set(data.slice(2), get_file_data.length);
+                                get_file_data = new_buf;
+                                update_file_status('Getting ' + get_file_name + ', ' + get_file_data.length + ' bytes');
                             }
                         } else {
                             binary_state = 0;
@@ -165,9 +207,10 @@ function connect(url) {
                     case 23:
                         // final response
                         if (decode_resp(data) == 0) {
-                            console.log('success!');
+                            update_file_status('Got ' + get_file_name + ', ' + get_file_data.length + ' bytes');
+                            saveAs(new Blob([get_file_data], {type: "application/octet-stream"}), get_file_name);
                         } else {
-                            console.log('fail');
+                            update_file_status('Failed getting ' + get_file_name);
                         }
                         binary_state = 0;
                         break;
@@ -196,8 +239,8 @@ function decode_resp(data) {
 }
 
 function put_file() {
-    var dest_fname = 'test2.txt';
-    var dest_fsize = 10;
+    var dest_fname = put_file_name;
+    var dest_fsize = put_file_data.length;
 
     // WEBREPL_FILE = "<2sBBQLH64s"
     var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
@@ -218,11 +261,12 @@ function put_file() {
 
     // initiate put
     binary_state = 11;
+    update_file_status('Sending ' + put_file_name + '...');
     ws.send(rec);
 }
 
 function get_file() {
-    var src_fname = 'test.txt';
+    var src_fname = document.getElementById('get_filename').value;
 
     // WEBREPL_FILE = "<2sBBQLH64s"
     var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
@@ -243,8 +287,31 @@ function get_file() {
 
     // initiate get
     binary_state = 21;
+    get_file_name = src_fname;
+    get_file_data = new Uint8Array(0);
+    update_file_status('Getting ' + get_file_name + '...');
     ws.send(rec);
 }
+
+function handle_put_file_select(evt) {
+    // The event holds a FileList object which is a list of File objects,
+    // but we only support single file selection at the moment.
+    var files = evt.target.files;
+
+    // Get the file info and load its data.
+    var f = files[0];
+    put_file_name = f.name;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        put_file_data = new Uint8Array(e.target.result);
+        document.getElementById('put-file-list').innerHTML = '' + escape(put_file_name) + ' - ' + put_file_data.length + ' bytes';
+        document.getElementById('put-file-button').disabled = false;
+    };
+    reader.readAsArrayBuffer(f);
+}
+
+document.getElementById('put-file-select').addEventListener('change', handle_put_file_select, false);
+document.getElementById('put-file-button').disabled = true;
 
 </script>
 
