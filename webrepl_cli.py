@@ -105,7 +105,7 @@ def put_file(ws, local_file, remote_file):
     sz = os.stat(local_file)[6]
     dest_fname = (SANDBOX + remote_file).encode("utf-8")
     rec = struct.pack(WEBREPL_FILE, b"WA", 1, 0, 0, sz, len(dest_fname), dest_fname)
-    print(rec, len(rec))
+    debugmsg("%r %d" % (rec, len(rec)))
     ws.write(rec[:10])
     ws.write(rec[10:])
     assert read_resp(ws) == 0
