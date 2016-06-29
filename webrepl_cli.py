@@ -109,12 +109,17 @@ def put_file(ws, local_file, remote_file):
     ws.write(rec[:10])
     ws.write(rec[10:])
     assert read_resp(ws) == 0
+    cnt = 0
     with open(local_file, "rb") as f:
         while True:
+            sys.stdout.write("Sent %d of %d bytes\r" % (cnt, sz))
+            sys.stdout.flush()
             buf = f.read(1024)
             if not buf:
                 break
             ws.write(buf)
+            cnt += len(buf)
+    print()
     assert read_resp(ws) == 0
 
 def get_file(ws, local_file, remote_file):
