@@ -130,6 +130,7 @@ def get_file(ws, local_file, remote_file):
     with open(local_file, "wb") as f:
         cnt = 0
         while True:
+            ws.write(b"\0")
             (sz,) = struct.unpack("<H", ws.read(2))
             if sz == 0:
                 break
