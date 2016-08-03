@@ -181,6 +181,9 @@ function connect(url) {
                         // first response for get
                         if (decode_resp(data) == 0) {
                             binary_state = 22;
+                            var rec = new Uint8Array(1);
+                            rec[0] = 0;
+                            ws.send(rec);
                         }
                         break;
                     case 22: {
@@ -198,6 +201,10 @@ function connect(url) {
                                 new_buf.set(data.slice(2), get_file_data.length);
                                 get_file_data = new_buf;
                                 update_file_status('Getting ' + get_file_name + ', ' + get_file_data.length + ' bytes');
+
+                                var rec = new Uint8Array(1);
+                                rec[0] = 0;
+                                ws.send(rec);
                             }
                         } else {
                             binary_state = 0;
