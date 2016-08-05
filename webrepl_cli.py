@@ -123,10 +123,11 @@ def put_file(ws, local_file, remote_file):
 def get_file(ws, local_file, remote_file):
     src_fname = (SANDBOX + remote_file).encode("utf-8")
     rec = struct.pack(WEBREPL_FILE, b"WA", 2, 0, 0, 0, len(src_fname), src_fname)
-    print(rec, len(rec))
+    debugmsg("%r %d" % (rec, len(rec)))
     ws.write(rec)
     assert read_resp(ws) == 0
     with open(local_file, "wb") as f:
+        cnt = 0
         while True:
             (sz,) = struct.unpack("<H", ws.read(2))
             if sz == 0:
@@ -135,8 +136,12 @@ def get_file(ws, local_file, remote_file):
                 buf = ws.read(sz)
                 if not buf:
                     raise OSError()
+                cnt += len(buf)
                 f.write(buf)
                 sz -= len(buf)
+                sys.stdout.write("Received %d bytes\r" % cnt)
+                sys.stdout.flush()
+    print()
     assert read_resp(ws) == 0
 
 
