@@ -3,7 +3,6 @@ from __future__ import print_function
 import sys
 import os
 import struct
-import getpass
 try:
     import usocket as socket
 except ImportError:
@@ -86,13 +85,12 @@ else:
             assert req == 9 and val == 2
 
 
-def login(ws):
+def login(ws, passwd):
     while True:
         c = ws.read(1, text_ok=True)
         if c == b":":
             assert ws.read(1, text_ok=True) == b" "
             break
-    passwd = getpass.getpass()
     ws.write(passwd.encode("utf-8") + b"\r")
 
 def read_resp(ws):
@@ -168,6 +166,7 @@ def parse_remote(remote):
         port = int(port)
     return (host, port, fname)
 
+
 def main():
 
     if len(sys.argv) != 3:
@@ -208,7 +207,9 @@ def main():
 
     ws = websocket(s)
 
-    login(ws)
+    import getpass
+    passwd = getpass.getpass()
+    login(ws, passwd)
 
     # Set websocket to send data marked as "binary"
     ws.ioctl(9, 2)
