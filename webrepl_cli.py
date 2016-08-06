@@ -16,8 +16,9 @@ SANDBOX = ""
 #SANDBOX = "/tmp/webrepl/"
 DEBUG = 0
 
-WEBREPL_FILE = "<2sBBQLH64s"
-
+WEBREPL_REQ_S = "<2sBBQLH64s"
+WEBREPL_PUT_FILE = 1
+WEBREPL_GET_FILE = 2
 
 def debugmsg(msg):
     if DEBUG:
@@ -102,7 +103,7 @@ def read_resp(ws):
 def put_file(ws, local_file, remote_file):
     sz = os.stat(local_file)[6]
     dest_fname = (SANDBOX + remote_file).encode("utf-8")
-    rec = struct.pack(WEBREPL_FILE, b"WA", 1, 0, 0, sz, len(dest_fname), dest_fname)
+    rec = struct.pack(WEBREPL_REQ_S, b"WA", WEBREPL_PUT_FILE, 0, 0, sz, len(dest_fname), dest_fname)
     debugmsg("%r %d" % (rec, len(rec)))
     ws.write(rec[:10])
     ws.write(rec[10:])
@@ -122,7 +123,7 @@ def put_file(ws, local_file, remote_file):
 
 def get_file(ws, local_file, remote_file):
     src_fname = (SANDBOX + remote_file).encode("utf-8")
-    rec = struct.pack(WEBREPL_FILE, b"WA", 2, 0, 0, 0, len(src_fname), src_fname)
+    rec = struct.pack(WEBREPL_REQ_S, b"WA", WEBREPL_GET_FILE, 0, 0, 0, len(src_fname), src_fname)
     debugmsg("%r %d" % (rec, len(rec)))
     ws.write(rec)
     assert read_resp(ws) == 0
