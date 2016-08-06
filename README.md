@@ -8,6 +8,11 @@ To start WebREPL terminal client, clone or download this repository
 (in full) and open webrepl.html in a browser. Recent versions of
 Firefox and Chrome (or Chromium) are supported.
 
+The latest version of the client is also hosted online at
+http://micropython.org/webrepl (note: while it's hosted online,
+all interaction with your boards still happen locally in your
+own network).
+
 WebREPL file transfer
 ---------------------
 
