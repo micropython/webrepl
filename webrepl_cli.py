@@ -19,6 +19,8 @@ DEBUG = 0
 WEBREPL_REQ_S = "<2sBBQLH64s"
 WEBREPL_PUT_FILE = 1
 WEBREPL_GET_FILE = 2
+WEBREPL_GET_VER  = 3
+
 
 def debugmsg(msg):
     if DEBUG:
@@ -99,6 +101,20 @@ def read_resp(ws):
     sig, code = struct.unpack("<2sH", data)
     assert sig == b"WB"
     return code
+
+
+def send_req(ws, op, sz=0, fname=""):
+    rec = struct.pack(WEBREPL_REQ_S, b"WA", op, 0, 0, sz, len(fname), fname)
+    debugmsg("%r %d" % (rec, len(rec)))
+    ws.write(rec)
+
+
+def get_ver(ws):
+    send_req(ws, WEBREPL_GET_VER)
+    d = ws.read(3)
+    d = struct.unpack("<BBB", d)
+    return d
+
 
 def put_file(ws, local_file, remote_file):
     sz = os.stat(local_file)[6]
@@ -217,6 +233,7 @@ def main():
     import getpass
     passwd = getpass.getpass()
     login(ws, passwd)
+    print("Remote WebREPL version:", get_ver(ws))
 
     # Set websocket to send data marked as "binary"
     ws.ioctl(9, 2)
