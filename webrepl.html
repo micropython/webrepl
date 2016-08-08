@@ -221,6 +221,11 @@ function connect(url) {
                         }
                         binary_state = 0;
                         break;
+                    case 31:
+                        // first (and last) response for GET_VER
+                        console.log('GET_VER', data);
+                        binary_state = 0;
+                        break;
                 }
             }
             term.write(event.data);
@@ -297,6 +302,19 @@ function get_file() {
     get_file_name = src_fname;
     get_file_data = new Uint8Array(0);
     update_file_status('Getting ' + get_file_name + '...');
+    ws.send(rec);
+}
+
+function get_ver() {
+    // WEBREPL_REQ_S = "<2sBBQLH64s"
+    var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
+    rec[0] = 'W'.charCodeAt(0);
+    rec[1] = 'A'.charCodeAt(0);
+    rec[2] = 3; // GET_VER
+    // rest of "rec" is zero
+
+    // initiate GET_VER
+    binary_state = 31;
     ws.send(rec);
 }
 
