@@ -103,7 +103,7 @@ def read_resp(ws):
     return code
 
 
-def send_req(ws, op, sz=0, fname=""):
+def send_req(ws, op, sz=0, fname=b""):
     rec = struct.pack(WEBREPL_REQ_S, b"WA", op, 0, 0, sz, len(fname), fname)
     debugmsg("%r %d" % (rec, len(rec)))
     ws.write(rec)
