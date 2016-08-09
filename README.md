@@ -35,7 +35,7 @@ Technical details
 -----------------
 
 WebREPL is the latest standard (in the sense of an Internet RFC) for
-communicating and controlling a MicroPython-based board. Following
+communicating with and controlling a MicroPython-based board. Following
 were the requirements for the protocol design:
 
 1. Single connection/channel, multiplexing terminal access, filesystem
