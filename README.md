@@ -13,6 +13,17 @@ http://micropython.org/webrepl (note: while it's hosted online,
 all interaction with your boards still happen locally in your
 own network).
 
+At this time, WebREPL client cannot be accessed over HTTPS connection.
+This is due to not widely published policy that HTTPS pages may
+access only WSS (WebSocket Secure) protocol. This is somewhat
+similar to warnings issues when e.g. an HTTPS paeg loads an image
+over plain HTTP. However, in case of WebSockets, some browsers
+don't even issue a user-visible warning, and other may word it
+confusingly, so it's hard to understand that it applies to WebSocket
+connection. As WebREPL is intended to be used only within user's
+local network, HTTPS isn't strictly required, and not accessing
+webrepl.html over HTTPS is a suggested workaround.
+
 WebREPL file transfer
 ---------------------
 
