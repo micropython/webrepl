@@ -97,6 +97,10 @@ function calculate_size(win) {
 
 (function() {
     window.onload = function() {
+      var url = window.location.hash.substring(1);
+      if (url) {
+        document.getElementById('url').value = 'ws://' + url;
+      }
       var size = calculate_size(self);
       term = new Terminal({
         cols: size[0],
@@ -149,6 +153,7 @@ function update_file_status(s) {
 }
 
 function connect(url) {
+    window.location.hash = url.substring(5);
     ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
     ws.onopen = function() {
