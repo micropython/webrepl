@@ -13,14 +13,14 @@ http://micropython.org/webrepl (note: while it's hosted online,
 all interaction with your boards still happen locally in your
 own network).
 
-At this time, WebREPL client cannot be accessed over HTTPS connection.
+At this time, WebREPL client cannot be accessed over HTTPS connections.
 This is due to not widely published policy that HTTPS pages may
 access only WSS (WebSocket Secure) protocol. This is somewhat
-similar to warnings issues when e.g. an HTTPS paeg loads an image
+similar to warnings issued when e.g. an HTTPS page loads an image
 over plain HTTP. However, in case of WebSockets, some browsers
-don't even issue a user-visible warning, and other may word it
+don't even issue a user-visible warning, and others may word it
 confusingly, so it's hard to understand that it applies to WebSocket
-connection. As WebREPL is intended to be used only within user's
+connections. As WebREPL is intended to be used only within a user's
 local network, HTTPS isn't strictly required, and not accessing
 webrepl.html over HTTPS is a suggested workaround.
 
@@ -55,7 +55,7 @@ access, and board control.
 2. Network ready and Web technologies ready (allowing access directly
 from a browser with an HTML-based client).
 
-Based on these requirements, WebREPL uses single connection over
+Based on these requirements, WebREPL uses a single connection over
 [WebSocket](https://en.wikipedia.org/wiki/WebSocket) as a transport
 protocol. Note that while WebREPL is primarily intended for network
 (usually, wireless) connection, due to its single-connection,
@@ -76,7 +76,7 @@ access/operations will be blocking).
 it's not intended to support multiple, per-connection sessions.
 There's a single REPL session, and this same session is accessible
 via different media, like UART or WebREPL. This also means that
-there's usually no point in having more than one WenREPL connection
+there's usually no point in having more than one WebREPL connection
 (multiple connections would access the same session), and a
 particular system may actually limit number of concurrent
 connections to ease implementation and save system resources.
@@ -91,7 +91,7 @@ communicate terminal input and output between a client and a WebREPL-
 enabled device (server). There's a guaranteed password prompt, which
 can be detected by the appearance of characters ':', ' ' (at this
 point, server expected a password ending with '\n' from client).
-If you're interested to develop a 3rd-party application to communicate
+If you're interested in developing a 3rd-party application to communicate
 using WebREPL terminal protocol, the information above should be enough
 to implement it (or feel free to study implementation of the official
 clients in this repository).
@@ -106,7 +106,7 @@ The `webrepl_cli.py` module mentioned above intended to be both a
 command-line tool and a library for 3rd-party projects to use, though
 it may not be there yet. If you're interested in integrating WebREPL
 transfer/control capabilities into your application, please submit
-a ticket to Github with information about your project and how it is
+a ticket to GitHub with information about your project and how it is
 useful to MicroPython community, to help us prioritize this work.
 
 While the protocol is (eventually) intended to provide full-fledged
