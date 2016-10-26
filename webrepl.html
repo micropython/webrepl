@@ -97,19 +97,19 @@ function calculate_size(win) {
 
 (function() {
     window.onload = function() {
-      var url = window.location.hash.substring(1);
-      if(url) {
-      	document.getElementById('url').value = 'ws://' + url;
-      }
-      var size = calculate_size(self);
-      term = new Terminal({
-        cols: size[0],
-        rows: size[1],
-        useStyle: true,
-        screenKeys: true,
-        cursorBlink: false
-      });
-      term.open(document.getElementById("term"));
+        var url = window.location.hash.substring(1);
+        if(url) {
+            document.getElementById('url').value = 'ws://' + url;
+        }
+        var size = calculate_size(self);
+        term = new Terminal({
+            cols: size[0],
+            rows: size[1],
+            useStyle: true,
+            screenKeys: true,
+            cursorBlink: false
+        });
+        term.open(document.getElementById("term"));
     };
     window.addEventListener('resize', function() {
         var size = calculate_size(self);
