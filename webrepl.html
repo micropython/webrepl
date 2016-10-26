@@ -252,6 +252,7 @@ function connect(url) {
         if (term) {
             term.write('\x1b[31mDisconnected\x1b[m\r\n');
         }
+        term.off('data');
         prepare_for_connect();
     }
 }
