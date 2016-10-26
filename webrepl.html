@@ -48,6 +48,7 @@
 <form>
 <input type="text" name="webrepl_url" id="url" value="ws://192.168.4.1:8266/" />
 <input type="submit" id="button" value="Connect" onclick="button_click(); return false;" />
+<span id="version"></span>
 </form>
 <div id="term">
 </div>
@@ -88,6 +89,7 @@ var put_file_name = null;
 var put_file_data = null;
 var get_file_name = null;
 var get_file_data = null;
+var version = null;
 
 function calculate_size(win) {
     var cols = Math.max(80, Math.min(150, (win.innerWidth - 280) / 7)) | 0;
@@ -154,6 +156,9 @@ function connect(url) {
         term.write('\x1b[31mWelcome to MicroPython!\x1b[m\r\n');
 
         ws.onmessage = function(event) {
+            if (version == undefined && typeof event.data == 'string' && event.data.indexOf('WebREPL connected') > 0) {
+                get_ver();
+            }
             if (event.data instanceof ArrayBuffer) {
                 var data = new Uint8Array(event.data);
                 switch (binary_state) {
@@ -224,6 +229,8 @@ function connect(url) {
                     case 31:
                         // first (and last) response for GET_VER
                         console.log('GET_VER', data);
+                        version = data.join('.');
+                        document.getElementById('version').innerText = 'MicroPython ' + version;
                         binary_state = 0;
                         break;
                 }
