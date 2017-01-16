@@ -185,7 +185,7 @@ def parse_remote(remote):
         fname = "/"
     port = 8266
     if ":" in host:
-        host, port = remote.split(":")
+        host, port = host.split(":")
         port = int(port)
     return (host, port, fname)
 
