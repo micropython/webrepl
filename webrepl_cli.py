@@ -35,13 +35,14 @@ else:
             self.s = s
             self.buf = b""
 
-        def write(self, data):
+        def write(self, data, text=False):
+            OpCode = 1 if text else 2
             l = len(data)
             if l < 126:
                 # TODO: hardcoded "binary" type
-                hdr = struct.pack(">BB", 0x82, l)
+                hdr = struct.pack(">BB", 0x80+OpCode, l)
             else:
-                hdr = struct.pack(">BBH", 0x82, 126, l)
+                hdr = struct.pack(">BBH", 0x80+OpCode, 126, l)
             self.s.send(hdr)
             self.s.send(data)
 
@@ -163,15 +164,32 @@ def get_file(ws, local_file, remote_file):
 
 
 def help(rc=0):
-    exename = sys.argv[0].rsplit("/", 1)[-1]
-    print("%s - Perform remote file operations using MicroPython WebREPL protocol" % exename)
-    print("Arguments:")
-    print("  [-p password] <host>:<remote_file> <local_file> - Copy remote file to local file")
-    print("  [-p password] <local_file> <host>:<remote_file> - Copy local file to remote file")
-    print("Examples:")
-    print("  %s script.py 192.168.4.1:/another_name.py" % exename)
-    print("  %s script.py 192.168.4.1:/app/" % exename)
-    print("  %s -p password 192.168.4.1:/app/script.py ." % exename)
+    exename = os.path.basename(sys.argv[0])
+
+    print(
+        '{exename} - Perform remote file operations using MicroPython WebREPL protocol'
+        '\n'
+        'Syntax:\n'
+        '    webrepl_cli.py [options] [src dst]\n'
+        '\n'
+        'Options:\n'
+        '    --passwd pw    Set the login password\n'
+        '    --host host    Set the host when using commands\n'
+        '    --cmd cmd      Execute the command cmd in the server\n'
+
+        'File copy:\n'
+
+        '       <host>:<remote_file> <local_file> - Copy remote file to local file\n'
+        '       <local_file> <host>:<remote_file> - Copy local file to remote file\n'
+        '\n'
+        'Examples:\n'
+        '  {exename} script.py 192.168.4.1:/another_name.py\n'
+        '  {exename} script.py 192.168.4.1:/app/\n'
+        '  {exename} 192.168.4.1:/app/script.py\n'
+
+        '\n'
+        .format(exename=exename))
+
     sys.exit(rc)
 
 def error(msg):
@@ -212,43 +230,68 @@ Sec-WebSocket-Key: foo\r
 
 
 def main():
-    if len(sys.argv) not in (3, 5):
-        help(1)
-
     passwd = None
-    for i in range(len(sys.argv)):
-        if sys.argv[i] == '-p':
-            sys.argv.pop(i)
-            passwd = sys.argv.pop(i)
-            break
+    cmd = None
+    host = '192.168.0.1'
+    port = 8266
 
-    if not passwd:
-        import getpass
-        passwd = getpass.getpass()
+    argp = 1
+    while argp < len(sys.argv) and sys.argv[argp][0] == '-':
+        S_ = sys.argv[argp]
+        argp+=1
 
-    if ":" in sys.argv[1] and ":" in sys.argv[2]:
-        error("Operations on 2 remote files are not supported")
-    if ":" not in sys.argv[1] and ":" not in sys.argv[2]:
-        error("One remote file is required")
+        if S_ == '--help':
+            help(0)
+            exit(0)
+            
+        if S_ == '--passwd' or S_=='-p':
+            passwd = sys.argv[argp]
+            argp+=1
+            continue
 
-    if ":" in sys.argv[1]:
-        op = "get"
-        host, port, src_file = parse_remote(sys.argv[1])
-        dst_file = sys.argv[2]
-        if os.path.isdir(dst_file):
-            basename = src_file.rsplit("/", 1)[-1]
-            dst_file += "/" + basename
+        if S_ == '--host' or S_=='-h':
+            host = sys.argv[argp]
+            argp+=1
+            continue
+
+        if S_ == '--cmd':
+            cmd = sys.argv[argp]
+            argp+=1
+            continue
+
+        error('Unknown option: ' + S_ + '!')
+
+    if cmd is None:
+        if len(sys.argv) < argp+2:
+            print('Need at least two arguments for file copy!')
+            exit(-1)
+
+        if ":" in sys.argv[argp] and ":" in sys.argv[argp+1]:
+            error("Operations on 2 remote files are not supported")
+        if ":" not in sys.argv[argp] and ":" not in sys.argv[argp+1]:
+            error("One remote file is required")
+    
+        if ":" in sys.argv[argp]:
+            op = "get"
+            host, port, src_file = parse_remote(sys.argv[argp])
+            dst_file = sys.argv[argp+1]
+            if os.path.isdir(dst_file):
+                basename = src_file.rsplit("/", 1)[-1]
+                dst_file += "/" + basename
+        else:
+            op = "put"
+            host, port, dst_file = parse_remote(sys.argv[argp+1])
+            src_file = sys.argv[argp]
+            if dst_file[-1] == "/":
+                basename = src_file.rsplit("/", 1)[-1]
+                dst_file += basename
+    
+        if 1:
+            print(op, host, port)
+            print(src_file, "->", dst_file)
     else:
-        op = "put"
-        host, port, dst_file = parse_remote(sys.argv[2])
-        src_file = sys.argv[1]
-        if dst_file[-1] == "/":
-            basename = src_file.rsplit("/", 1)[-1]
-            dst_file += basename
-
-    if True:
-        print("op:%s, host:%s, port:%d, passwd:%s." % (op, host, port, passwd))
-        print(src_file, "->", dst_file)
+        if host is None:
+            error('Must specify port for executing commands!')
 
     s = socket.socket()
 
@@ -261,17 +304,23 @@ def main():
 
     ws = websocket(s)
 
+    if passwd is None:
+      import getpass
+      passwd = getpass.getpass()
+
     login(ws, passwd)
     print("Remote WebREPL version:", get_ver(ws))
 
     # Set websocket to send data marked as "binary"
     ws.ioctl(9, 2)
 
-    if op == "get":
-        get_file(ws, dst_file, src_file)
-    elif op == "put":
-        put_file(ws, src_file, dst_file)
-
+    if cmd is not None:
+        ws.write(cmd+'\r', text=True)
+    else:
+      if op == "get":
+          get_file(ws, dst_file, src_file)
+      elif op == "put":
+          put_file(ws, src_file, dst_file)
     s.close()
 
 
