@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 import os
 import struct
+import time
 try:
     import usocket as socket
 except ImportError:
@@ -88,13 +89,39 @@ else:
             assert req == 9 and val == 2
 
 
+class FirstTimeReset(Exception):
+    """After logging in the first time, we need to re-connect because of
+    reset."""
+    pass
+
+
 def login(ws, passwd):
+    """Login or setup password."""
+    msg = b""
     while True:
         c = ws.read(1, text_ok=True)
+        msg = msg + c
         if c == b":":
-            assert ws.read(1, text_ok=True) == b" "
-            break
-    ws.write(passwd.encode("utf-8") + b"\r")
+            assert ws.read(1, text_ok=True) == b" ", "received invalid char"
+            ws.write(passwd.encode("utf-8") + b"\r")
+
+            if msg.endswith("New password:"):
+                print("This is the first time you connect to WebREPL, setting"
+                      " password permanently...")
+            elif msg.endswith("Confirm password:"):
+                msg = ''
+                while True:
+                    msg += ws.read(1, text_ok=True)
+                    if msg.endswith('Password successfully set, '
+                                    'restarting...\r\n'):
+                        break
+                raise FirstTimeReset("please reconnect and login again")
+            elif msg.endswith("Password:"):
+                break
+            else:
+                print("msg={}".format(msg))
+                raise RuntimeError("invalid WebREPL protocol")
+
 
 def read_resp(ws):
     data = ws.read(4)
@@ -190,6 +217,15 @@ def parse_remote(remote):
     return (host, port, fname)
 
 
+def create_websocket(addr):
+    s = socket.socket()
+    s.connect(addr)
+    #s = s.makefile("rwb")
+    websocket_helper.client_handshake(s)
+    ws = websocket(s)
+    return ws
+
+
 def main():
 
     if len(sys.argv) != 3:
@@ -219,20 +255,26 @@ def main():
         print(op, host, port)
         print(src_file, "->", dst_file)
 
-    s = socket.socket()
 
     ai = socket.getaddrinfo(host, port)
     addr = ai[0][4]
 
-    s.connect(addr)
-    #s = s.makefile("rwb")
-    websocket_helper.client_handshake(s)
-
-    ws = websocket(s)
+    ws = create_websocket(addr)
 
     import getpass
     passwd = getpass.getpass()
-    login(ws, passwd)
+    try:
+        login(ws, passwd)
+    except FirstTimeReset:
+        # reconnecting and relogin after setting password
+        ws.s.close()
+
+        # avoid race condition: if too fast here, we get again into
+        # the password setup dialog
+        time.sleep(2)
+        ws = create_websocket(addr)
+        login(ws, passwd)
+
     print("Remote WebREPL version:", get_ver(ws))
 
     # Set websocket to send data marked as "binary"
@@ -243,7 +285,7 @@ def main():
     elif op == "put":
         put_file(ws, src_file, dst_file)
 
-    s.close()
+    ws.s.close()
 
 
 if __name__ == "__main__":
