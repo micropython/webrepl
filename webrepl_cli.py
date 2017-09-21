@@ -167,8 +167,8 @@ def help(rc=0):
     exename = sys.argv[0].rsplit("/", 1)[-1]
     print("%s - Perform remote file operations using MicroPython WebREPL protocol" % exename)
     print("Arguments:")
-    print("  <host>:<remote_file> <local_file> - Copy remote file to local file")
-    print("  <local_file> <host>:<remote_file> - Copy local file to remote file")
+    print("  <host>:<remote_file> <local_file> [password] - Copy remote file to local file")
+    print("  <local_file> <host>:<remote_file> [password] - Copy local file to remote file")
     print("Examples:")
     print("  %s script.py 192.168.4.1:/another_name.py" % exename)
     print("  %s script.py 192.168.4.1:/app/" % exename)
@@ -192,7 +192,7 @@ def parse_remote(remote):
 
 def main():
 
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in [3, 4]:
         help(1)
 
     if ":" in sys.argv[1] and ":" in sys.argv[2]:
@@ -215,8 +215,14 @@ def main():
             basename = src_file.rsplit("/", 1)[-1]
             dst_file += basename
 
-    if 1:
-        print(op, host, port)
+    if len(sys.argv) > 2:
+        passwd = sys.argv[3]
+    else:
+        import getpass
+        passwd = getpass.getpass()
+
+    if True:
+        print(f"op:{op}, host:{host}, port:{port}, passwd:{passwd}.")
         print(src_file, "->", dst_file)
 
     s = socket.socket()
@@ -230,8 +236,6 @@ def main():
 
     ws = websocket(s)
 
-    import getpass
-    passwd = getpass.getpass()
     login(ws, passwd)
     print("Remote WebREPL version:", get_ver(ws))
 
