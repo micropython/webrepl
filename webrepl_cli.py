@@ -14,7 +14,7 @@ USE_BUILTIN_WEBSOCKET = 0
 # Treat this remote directory as a root for file transfers
 SANDBOX = ""
 #SANDBOX = "/tmp/webrepl/"
-DEBUG = 0
+OUTPUT_LEVEL = 1
 
 WEBREPL_REQ_S = "<2sBBQLH64s"
 WEBREPL_PUT_FILE = 1
@@ -23,9 +23,12 @@ WEBREPL_GET_VER  = 3
 
 
 def debugmsg(msg):
-    if DEBUG:
+    if OUTPUT_LEVEL > 1:
         print(msg)
 
+def infomsg(msg):
+    if OUTPUT_LEVEL > 0:
+        print(msg)
 
 if USE_BUILTIN_WEBSOCKET:
     from websocket import websocket
@@ -191,39 +194,43 @@ def parse_remote(remote):
 
 
 def main():
-
     if len(sys.argv) not in [3, 5]:
         help(1)
 
-    if ":" in sys.argv[1] and ":" in sys.argv[2]:
-        error("Operations on 2 remote files are not supported")
-    if ":" not in sys.argv[1] and ":" not in sys.argv[2]:
-        error("One remote file is required")
-
-    if ":" in sys.argv[1]:
-        op = "get"
-        host, port, src_file = parse_remote(sys.argv[1])
-        dst_file = sys.argv[2]
-        if os.path.isdir(dst_file):
-            basename = src_file.rsplit("/", 1)[-1]
-            dst_file += "/" + basename
-    else:
-        op = "put"
-        host, port, dst_file = parse_remote(sys.argv[2])
-        src_file = sys.argv[1]
-        if dst_file[-1] == "/":
-            basename = src_file.rsplit("/", 1)[-1]
-            dst_file += basename
-
-    if len(sys.argv) > 2 and sys.argv[3] == '-p':
-        passwd = sys.argv[4]
+    if len(sys.argv) == 5 and '-p' in sys.argv:
+        passwd_specifier_i = sys.argv.index('-p')
+        passwd = sys.argv[passwd_specifier_i + 1]
+        arguments = [sys.argv[i] for i in range(len(sys.argv)) 
+                                 if  i not in (passwd_specifier_i, passwd_specifier_i + 1)]
     else:
         import getpass
         passwd = getpass.getpass()
+        arguments = sys.argv
 
-    if True:
-        print("op:%s, host:%s, port:%d, passwd:%s." % (op, host, port, passwd))
-        print(src_file, "->", dst_file)
+    if ":" in arguments[1] and ":" in arguments[2]:
+        error("Operations on 2 remote files are not supported")
+    if ":" not in arguments[1] and ":" not in arguments[2]:
+        error("One remote file is required")
+
+
+    if ":" in arguments[1]:
+        op = "get"
+        host, port, src_file = parse_remote(arguments[1])
+        dst_file = arguments[2]
+        if os.path.isdir(dst_file):
+            basename = src_file.rsplit("/", 1)[-1]
+            dst_file += "/" + basename
+        infomsg("%s %s from %s:%d (passwd:%s) and save as %s" % 
+                            (op, src_file, host, port, passwd, os.path.abspath(dst_file)))
+    else:
+        op = "put"
+        host, port, dst_file = parse_remote(arguments[2])
+        src_file = arguments[1]
+        if dst_file[-1] == "/":
+            basename = src_file.rsplit("/", 1)[-1]
+            dst_file += basename
+        infomsg("%s %s to %s:%d (passwd:%s) and save as %s" % 
+                            (op, os.path.abspath(src_file), host, port, passwd, dst_file))
 
     s = socket.socket()
 
@@ -237,7 +244,7 @@ def main():
     ws = websocket(s)
 
     login(ws, passwd)
-    print("Remote WebREPL version:", get_ver(ws))
+    infomsg("Remote WebREPL version: " + str(get_ver(ws)))
 
     # Set websocket to send data marked as "binary"
     ws.ioctl(9, 2)
