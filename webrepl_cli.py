@@ -222,7 +222,7 @@ def main():
         passwd = getpass.getpass()
 
     if True:
-        print(f"op:{op}, host:{host}, port:{port}, passwd:{passwd}.")
+        print("op:%s, host:%s, port:%d, passwd:%s." % (op, host, port, passwd))
         print(src_file, "->", dst_file)
 
     s = socket.socket()
