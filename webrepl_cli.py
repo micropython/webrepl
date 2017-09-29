@@ -167,12 +167,12 @@ def help(rc=0):
     exename = sys.argv[0].rsplit("/", 1)[-1]
     print("%s - Perform remote file operations using MicroPython WebREPL protocol" % exename)
     print("Arguments:")
-    print("  <host>:<remote_file> <local_file> - Copy remote file to local file")
-    print("  <local_file> <host>:<remote_file> - Copy local file to remote file")
+    print("  [-p password] <host>:<remote_file> <local_file> - Copy remote file to local file")
+    print("  [-p password] <local_file> <host>:<remote_file> - Copy local file to remote file")
     print("Examples:")
     print("  %s script.py 192.168.4.1:/another_name.py" % exename)
     print("  %s script.py 192.168.4.1:/app/" % exename)
-    print("  %s 192.168.4.1:/app/script.py ." % exename)
+    print("  %s -p hackme123 192.168.4.1:/app/script.py ." % exename)
     sys.exit(rc)
 
 def error(msg):
@@ -191,9 +191,19 @@ def parse_remote(remote):
 
 
 def main():
-
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in [3, 5]:
         help(1)
+
+    passwd = None
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == '-p':
+            sys.argv.pop(i)
+            passwd = sys.argv.pop(i)
+            break
+
+    if not passwd:
+        import getpass
+        passwd = getpass.getpass()
 
     if ":" in sys.argv[1] and ":" in sys.argv[2]:
         error("Operations on 2 remote files are not supported")
@@ -207,6 +217,8 @@ def main():
         if os.path.isdir(dst_file):
             basename = src_file.rsplit("/", 1)[-1]
             dst_file += "/" + basename
+        print("%s %s from %s:%d and save as %s" %
+                            (op, src_file, host, port, os.path.abspath(dst_file)))
     else:
         op = "put"
         host, port, dst_file = parse_remote(sys.argv[2])
@@ -214,10 +226,8 @@ def main():
         if dst_file[-1] == "/":
             basename = src_file.rsplit("/", 1)[-1]
             dst_file += basename
-
-    if 1:
-        print(op, host, port)
-        print(src_file, "->", dst_file)
+        print("%s %s to %s:%d and save as %s" %
+                            (op, os.path.abspath(src_file), host, port, dst_file))
 
     s = socket.socket()
 
@@ -230,8 +240,6 @@ def main():
 
     ws = websocket(s)
 
-    import getpass
-    passwd = getpass.getpass()
     login(ws, passwd)
     print("Remote WebREPL version:", get_ver(ws))
 
