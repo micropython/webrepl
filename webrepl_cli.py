@@ -14,7 +14,7 @@ USE_BUILTIN_WEBSOCKET = 0
 # Treat this remote directory as a root for file transfers
 SANDBOX = ""
 #SANDBOX = "/tmp/webrepl/"
-OUTPUT_LEVEL = 1
+DEBUG = 0
 
 WEBREPL_REQ_S = "<2sBBQLH64s"
 WEBREPL_PUT_FILE = 1
@@ -23,12 +23,9 @@ WEBREPL_GET_VER  = 3
 
 
 def debugmsg(msg):
-    if OUTPUT_LEVEL > 1:
+    if DEBUG:
         print(msg)
 
-def infomsg(msg):
-    if OUTPUT_LEVEL > 0:
-        print(msg)
 
 if USE_BUILTIN_WEBSOCKET:
     from websocket import websocket
@@ -170,12 +167,12 @@ def help(rc=0):
     exename = sys.argv[0].rsplit("/", 1)[-1]
     print("%s - Perform remote file operations using MicroPython WebREPL protocol" % exename)
     print("Arguments:")
-    print("  <host>:<remote_file> <local_file> [-p password] - Copy remote file to local file")
-    print("  <local_file> <host>:<remote_file> [-p password] - Copy local file to remote file")
+    print("  [-p password] <host>:<remote_file> <local_file> - Copy remote file to local file")
+    print("  [-p password] <local_file> <host>:<remote_file> - Copy local file to remote file")
     print("Examples:")
     print("  %s script.py 192.168.4.1:/another_name.py" % exename)
     print("  %s script.py 192.168.4.1:/app/" % exename)
-    print("  %s 192.168.4.1:/app/script.py . -p 123456" % exename)
+    print("  %s -p hackme123 192.168.4.1:/app/script.py ." % exename)
     sys.exit(rc)
 
 def error(msg):
@@ -197,40 +194,41 @@ def main():
     if len(sys.argv) not in [3, 5]:
         help(1)
 
-    if len(sys.argv) == 5 and '-p' in sys.argv:
-        passwd_specifier_i = sys.argv.index('-p')
-        passwd = sys.argv[passwd_specifier_i + 1]
-        arguments = [sys.argv[i] for i in range(len(sys.argv)) 
-                                 if  i not in (passwd_specifier_i, passwd_specifier_i + 1)]
-    else:
+    passwd = None
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == '-p':
+            sys.argv.pop(i)
+            passwd = sys.argv.pop(i)
+            break
+
+    if not passwd:
         import getpass
         passwd = getpass.getpass()
-        arguments = sys.argv
 
-    if ":" in arguments[1] and ":" in arguments[2]:
+    if ":" in sys.argv[1] and ":" in sys.argv[2]:
         error("Operations on 2 remote files are not supported")
-    if ":" not in arguments[1] and ":" not in arguments[2]:
+    if ":" not in sys.argv[1] and ":" not in sys.argv[2]:
         error("One remote file is required")
 
 
-    if ":" in arguments[1]:
+    if ":" in sys.argv[1]:
         op = "get"
-        host, port, src_file = parse_remote(arguments[1])
-        dst_file = arguments[2]
+        host, port, src_file = parse_remote(sys.argv[1])
+        dst_file = sys.argv[2]
         if os.path.isdir(dst_file):
             basename = src_file.rsplit("/", 1)[-1]
             dst_file += "/" + basename
-        infomsg("%s %s from %s:%d (passwd:%s) and save as %s" % 
-                            (op, src_file, host, port, passwd, os.path.abspath(dst_file)))
+        print("%s %s from %s:%d and save as %s" %
+                            (op, src_file, host, port, os.path.abspath(dst_file)))
     else:
         op = "put"
-        host, port, dst_file = parse_remote(arguments[2])
-        src_file = arguments[1]
+        host, port, dst_file = parse_remote(sys.argv[2])
+        src_file = sys.argv[1]
         if dst_file[-1] == "/":
             basename = src_file.rsplit("/", 1)[-1]
             dst_file += basename
-        infomsg("%s %s to %s:%d (passwd:%s) and save as %s" % 
-                            (op, os.path.abspath(src_file), host, port, passwd, dst_file))
+        print("%s %s to %s:%d and save as %s" %
+                            (op, os.path.abspath(src_file), host, port, dst_file))
 
     s = socket.socket()
 
@@ -244,7 +242,7 @@ def main():
     ws = websocket(s)
 
     login(ws, passwd)
-    infomsg("Remote WebREPL version: " + str(get_ver(ws)))
+    print("Remote WebREPL version: " + str(get_ver(ws)))
 
     # Set websocket to send data marked as "binary"
     ws.ioctl(9, 2)
