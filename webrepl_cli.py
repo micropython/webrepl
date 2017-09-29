@@ -210,7 +210,6 @@ def main():
     if ":" not in sys.argv[1] and ":" not in sys.argv[2]:
         error("One remote file is required")
 
-
     if ":" in sys.argv[1]:
         op = "get"
         host, port, src_file = parse_remote(sys.argv[1])
@@ -242,7 +241,7 @@ def main():
     ws = websocket(s)
 
     login(ws, passwd)
-    print("Remote WebREPL version: " + str(get_ver(ws)))
+    print("Remote WebREPL version:", get_ver(ws))
 
     # Set websocket to send data marked as "binary"
     ws.ioctl(9, 2)
