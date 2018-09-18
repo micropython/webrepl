@@ -42,6 +42,34 @@ WebREPL connection, so while webrepl.html is connected to device,
 webrepl_cli.py can't transfer files, and vice versa.
 
 
+WebREPL shell
+---------------------
+
+webrepl_client.py provides remote shell using MicroPython WebREPL protocol.
+With "-v" option switching between normal and raw mode is possible.
+Without "-v" option WebREPL session looks very similar to what webrepl.html provides (in console instead of browser).
+
+Run
+
+    webrepl_client.py
+
+to see usage information. Previous section on only one active WebREPL connection applies here as well. So you can run shell, then exit, then upload a modified module with webrepl_cli.py to MicroPython, login again in shell amd finally reload the module in shell.
+
+Small sample session:
+
+    $ webrepl_client.py 192.168.4.1
+    Password: abcd
+    
+    WebREPL connected
+    >>> 4**3**2
+    262144
+    >>> exit
+    ### closed ###
+    
+    $ 
+    
+
+
 Technical details
 -----------------
 
