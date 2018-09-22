@@ -82,7 +82,7 @@ while ws.sock and not ws.sock.connected and conn_timeout:
 try:
     while ws.sock and ws.sock.connected:
         inp = ((input() + ("\r\n" if silent else ""))
-               .replace("\\n", "\r\n")      # end of command in normal mode
+               .replace("\\n", "\\n" if silent else "\r\n")      # end of command in normal mode
                .replace("\\x01", "\x01")    # switch to raw mode
                .replace("\\x02", "\x02")    # switch to normal mode
                .replace("\\x03", "\x03")    # interrupt
