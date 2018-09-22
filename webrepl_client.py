@@ -13,6 +13,7 @@
 # + pep8online.com no warnings/errors
 #
 import sys
+import readline
 import websocket
 import threading
 from time import sleep
