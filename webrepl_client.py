@@ -47,12 +47,15 @@ inp = ""
 
 def on_message(ws, message):
     global inp
+    if (len(inp) == 1) and ord(inp[0]) <= 5:
+        inp = "\r\n"
     while (inp != "") and (message != "") and (inp[0] == message[0]):
         inp = inp[1:]
         message = message[1:]
     if (message != ""):
         inp = ""
     sys.stdout.write(message)
+#    print("[%s,%d]" % (message,ord(message[0])))  # for debug
     sys.stdout.flush()
 
 
