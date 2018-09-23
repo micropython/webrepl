@@ -42,6 +42,7 @@ def help(rc=0):
 if len(sys.argv) not in (2, 2):
     help(1)
 
+running = True
 inp = ""
 
 def on_message(ws, message):
@@ -56,7 +57,10 @@ def on_message(ws, message):
 
 
 def on_close(ws):
-    print("### closed ###")
+    sys.stdout.write("### closed ###\n")
+    sys.stdout.flush()
+    ws.close()
+    sys.exit(1)
 
 websocket.enableTrace(False)
 ws = websocket.WebSocketApp("ws://"+sys.argv[1]+":8266", on_message=on_message,
@@ -70,21 +74,31 @@ while ws.sock and not ws.sock.connected and conn_timeout:
     sleep(1)
     conn_timeout -= 1
 
-try:
-    while ws.sock and ws.sock.connected:
-        inp = do_input('')
-        do_input = input
+while running:
+    try:
+        while ws.sock and ws.sock.connected:
+            inp = do_input('')
+            do_input = input
 
-        if (len(inp) != 1) or (inp[0] < 'A') or (inp[0] > 'E'):
-            inp += "\r\n"
-        else:
-            inp = chr(ord(inp[0])-64)
+            if (len(inp) != 1) or (inp[0] < 'A') or (inp[0] > 'E'):
+                inp += "\r\n"
+            else:
+                inp = chr(ord(inp[0])-64)
 
-        if inp == "exit" + "\r\n":
-            ws.close()
+            if inp == "exit\r\n":
+                running = False
+                break
+            else:
+                if ws.sock and ws.sock.connected:
+                    ws.send(inp)
+        running = False
+    except KeyboardInterrupt:
+        if ws.sock and ws.sock.connected:
+            ws.send("\x03")
         else:
-            if ws.sock and ws.sock.connected:
-                ws.send(inp)
-except KeyboardInterrupt:
-    ws.close()
-    sys.exit(1)
+            running = False
+    except EOFError:
+        if ws.sock and ws.sock.connected:
+            ws.send("\x04")
+ws.close()
+sys.exit(1)
