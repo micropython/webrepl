@@ -34,12 +34,15 @@ def help(rc=0):
     print("Examples:")
     print("  %s 192.168.4.1" % exename)
     print("Special command control sequences:")
+    print("  line with single characters")
+    print("    'A' .. 'E' - CTRL-A .. CTRL-E")
     print('  just "exit" - end shell')
     sys.exit(rc)
 
-inp = ""
 if len(sys.argv) not in (2, 2):
     help(1)
+
+inp = ""
 
 def on_message(ws, message):
     global inp
@@ -69,12 +72,13 @@ while ws.sock and not ws.sock.connected and conn_timeout:
 
 try:
     while ws.sock and ws.sock.connected:
-        inp = ((do_input('') + "\r\n")
-               .replace("\\x01", "\x01")    # switch to raw mode
-               .replace("\\x02", "\x02")    # switch to normal mode
-               .replace("\\x03", "\x03")    # interrupt
-               .replace("\\x04", "\x04"))   # end of command in raw mode
+        inp = do_input('')
         do_input = input
+
+        if (len(inp) != 1) or (inp[0] < 'A') or (inp[0] > 'E'):
+            inp += "\r\n"
+        else:
+            inp = chr(ord(inp[0])-64)
 
         if inp == "exit" + "\r\n":
             ws.close()
