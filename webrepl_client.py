@@ -54,8 +54,10 @@ def on_message(ws, message):
         message = message[1:]
     if (message != ""):
         inp = ""
-    sys.stdout.write(message)
-#    print("[%s,%d]" % (message,ord(message[0])))  # for debug
+    if True:
+        sys.stdout.write(message)
+    else:
+        print("[%s,%d]" % (message,ord(message[0])))  # for debug
     sys.stdout.flush()
 
 
