@@ -44,16 +44,24 @@ if len(sys.argv) not in (2, 2):
 
 running = True
 inp = ""
+raw_mode    = False
+normal_mode = True
+paste_mode  = False
+
+
 
 def on_message(ws, message):
     global inp
     if (len(inp) == 1) and ord(inp[0]) <= 5:
-        inp = "\r\n"
+        inp = "\r\n" if (inp != '\x04') else "\x04"
     while (inp != "") and (message != "") and (inp[0] == message[0]):
         inp = inp[1:]
         message = message[1:]
     if (message != ""):
-        inp = ""
+        if not(raw_mode) or (inp != "\x04"):
+            inp = ""
+    if raw_mode and (message == "OK"):
+        inp = "\x04\x04"
     if True:
         sys.stdout.write(message)
     else:
@@ -83,12 +91,28 @@ while running:
     try:
         while ws.sock and ws.sock.connected:
             inp = do_input('')
-            do_input = input
 
             if (len(inp) != 1) or (inp[0] < 'A') or (inp[0] > 'E'):
                 inp += "\r\n"
             else:
                 inp = chr(ord(inp[0])-64)
+                if raw_mode:
+                    if (inp[0] == '\x02'):
+                        normal_mode = True
+                        raw_mode = False
+                elif (normal_mode):
+                    if (inp[0] == '\x01'):
+                        raw_mode = True
+                        normal_mode = False
+                    elif (inp[0] == '\x05'):
+                        paste_mode = True
+                        normal_mode = False
+                elif paste_mode:
+                    if (inp[0] == '\x03' or inp[0] == '\x04'):
+                        normal_mode = True
+                        paste_mode = False
+
+            do_input = getpass.getpass if raw_mode else input
 
             if inp == "exit\r\n":
                 running = False
