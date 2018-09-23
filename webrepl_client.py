@@ -65,8 +65,10 @@ def on_message(ws, message):
     if True:
         sys.stdout.write(message)
     else:
-        print("[%s,%d]" % (message, ord(message[0])))  # for debug
+        print("[%s,%d,%s]" % (message, ord(message[0]), inp))  # for debug
     sys.stdout.flush()
+    if paste_mode and (message == "=== "):
+        inp = "\n"
 
 
 def on_close(ws):
