@@ -14,6 +14,7 @@
 #
 import sys
 import readline
+import getpass
 import websocket
 import threading
 from time import sleep
@@ -22,7 +23,7 @@ try:                   # from https://stackoverflow.com/a/7321970
     input = raw_input  # Fix Python 2.x.
 except NameError:
     pass
-
+do_input = getpass.getpass
 
 def help(rc=0):
     exename = sys.argv[0].rsplit("/", 1)[-1]
@@ -82,12 +83,13 @@ while ws.sock and not ws.sock.connected and conn_timeout:
 
 try:
     while ws.sock and ws.sock.connected:
-        inp = ((input() + ("\r\n" if silent else ""))
+        inp = ((do_input('') + ("\r\n" if silent else ""))
                .replace("\\n", "\\n" if silent else "\r\n")      # end of command in normal mode
                .replace("\\x01", "\x01")    # switch to raw mode
                .replace("\\x02", "\x02")    # switch to normal mode
                .replace("\\x03", "\x03")    # interrupt
                .replace("\\x04", "\x04"))   # end of command in raw mode
+        do_input = input
 
         if inp == "exit" + ("\r\n" if silent else ""):
             ws.close()
