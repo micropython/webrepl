@@ -26,6 +26,7 @@ except NameError:
     pass
 do_input = getpass.getpass
 
+
 def help(rc=0):
     exename = sys.argv[0].rsplit("/", 1)[-1]
     print("%s - remote shell using MicroPython WebREPL protocol" % exename)
@@ -44,10 +45,9 @@ if len(sys.argv) not in (2, 2):
 
 running = True
 inp = ""
-raw_mode    = False
+raw_mode = False
 normal_mode = True
-paste_mode  = False
-
+paste_mode = False
 
 
 def on_message(ws, message):
@@ -65,7 +65,7 @@ def on_message(ws, message):
     if True:
         sys.stdout.write(message)
     else:
-        print("[%s,%d]" % (message,ord(message[0])))  # for debug
+        print("[%s,%d]" % (message, ord(message[0])))  # for debug
     sys.stdout.flush()
 
 
@@ -131,3 +131,4 @@ while running:
             ws.send("\x04")
 ws.close()
 sys.exit(1)
+
