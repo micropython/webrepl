@@ -1,17 +1,7 @@
 #!/usr/bin/env python
 #
-# based on console webrepl client from aivarannamaa:
+# complete rewrite of console webrepl client from aivarannamaa:
 # https://forum.micropython.org/viewtopic.php?f=2&t=3124&p=29865#p29865
-#
-# + on_message() flush fix
-# + "-s" silent option
-# + check for ws.sock for graceful endings in some situations
-# + try/except for graceful ending on CTRL-C
-# + now runs with python v2 as well as v3
-# + replace "-s" by "-v" option, make silent the default, "-v" for raw mode
-# + help()
-# + pep8online.com no warnings/errors
-# needs update after next commits
 #
 import sys
 import readline
@@ -60,8 +50,18 @@ def on_message(ws, message):
     if (message != ""):
         if not(raw_mode) or (inp != "\x04"):
             inp = ""
-    if raw_mode and (message == "OK"):
-        inp = "\x04\x04"
+    if raw_mode:
+        if (message == "OK"):
+            inp = "\x04\x04"
+        elif (message == "OK\x04"):
+            message = "OK"
+            inp = "\x04"
+        elif (message == "OK\x04\x04"):
+            message = "OK"
+            inp = ""
+        elif (message == "OK\x04\x04>"):
+            message = "OK>"
+            inp = ""
     if True:
         sys.stdout.write(message)
     else:
@@ -94,10 +94,11 @@ while running:
         while ws.sock and ws.sock.connected:
             inp = do_input('')
 
-            if (len(inp) != 1) or (inp[0] < 'A') or (inp[0] > 'E'):
+            if (len(inp) != 1) or ((inp[0] < 'A') and (inp[0] > '\x05')) or (inp[0] > 'E'):
                 inp += "\r\n"
             else:
-                inp = chr(ord(inp[0])-64)
+                if (inp[0] > '\x05'):
+                    inp = chr(ord(inp[0])-64) 
                 if raw_mode:
                     if (inp[0] == '\x02'):
                         normal_mode = True
@@ -109,10 +110,6 @@ while running:
                     elif (inp[0] == '\x05'):
                         paste_mode = True
                         normal_mode = False
-                elif paste_mode:
-                    if (inp[0] == '\x03' or inp[0] == '\x04'):
-                        normal_mode = True
-                        paste_mode = False
 
             do_input = getpass.getpass if raw_mode else input
 
@@ -122,15 +119,25 @@ while running:
             else:
                 if ws.sock and ws.sock.connected:
                     ws.send(inp)
+                else:
+                    running = False
         running = False
     except KeyboardInterrupt:
         if ws.sock and ws.sock.connected:
             ws.send("\x03")
+            if paste_mode:
+                normal_mode = True
+                paste_mode = False
         else:
             running = False
     except EOFError:
         if ws.sock and ws.sock.connected:
             ws.send("\x04")
+            if paste_mode:
+                normal_mode = True
+                paste_mode = False
+        else:
+            running = False
 ws.close()
 sys.exit(1)
 
