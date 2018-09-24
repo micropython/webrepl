@@ -46,29 +46,59 @@ WebREPL shell
 ---------------------
 
 webrepl_client.py provides remote shell using MicroPython WebREPL protocol.
-With "-v" option switching between normal and raw mode is possible.
-Without "-v" option WebREPL session looks very similar to what webrepl.html provides (in console instead of browser).
 
-Run
+Run just command for usage information:
 
-    webrepl_client.py
+    $ ./webrepl_client.py 
+    webrepl_client.py - remote shell using MicroPython WebREPL protocol
+    Arguments:
+      <host> - open remote shell (to <host>:8266)
+    Examples:
+      webrepl_client.py 192.168.4.1
+    Special command control sequences:
+      line with single characters
+        'A' .. 'E' - CTRL-A .. CTRL-E
+      just "exit" - end shell
+    $ 
 
-to see usage information. Previous section on only one active WebREPL connection applies here as well. So you can run shell, then exit, then upload a modified module with webrepl_cli.py to MicroPython, login again in shell amd finally reload the module in shell.
+Previous section on only one active WebREPL connection applies here as well. So you can run shell, then exit, then upload a modified module with webrepl_cli.py to MicroPython, login again in shell amd finally reload the module in shell.
 
-Small sample session:
 
-    $ webrepl_client.py 192.168.4.1
-    Password: abcd
+Input is invisible on password entry for WebREPL session, as well as in raw mode (raw mode is not available in webrepl.html). Commands can be edited on input, and command history is available.
+
+CTRL-A, CTRL-B and CTRL-E on empty line switch between modes. For webrepl_client.py these have to be entered by A+ENTER, B+ENTER, and E+ENTER. You can use CTRL-C and CTRL-D in webrepl_clinet.py normally.
+
+Normal mode is correct, as well as paste mode. Raw mode has invisible input, and output ">" is followed by "OK>" for every press of CTRL-D. Only difference to screen session is, that each completed line produces a new line.
+
+Although not documented in raw mode python help, CTRL-D is needed (as in paste mode, before CTRL-B to switch to normal mode) to commit the input lines sofar. CTRL-D can be pressed multiple times before CTRL-B. Beware that you need to have at least one line of input present, otherwise CTRL-D will do a soft reset on target platform. 
+
+Soft reset on target platform (by machine.reset() or by CTRL-D on empty input line) hangs webrepl_client.py session as well as webrepl.html browser session.
+
+Sample session with mode changes and invisible password and raw mode input:
+
+    $ webrepl_client.py 192.168.4.1 
+    Password: 
     
     WebREPL connected
+    >>> A
+    raw REPL; CTRL-B to exit
+    >
+    OK>
+    MicroPython v1.9.4-8-ga9a3caad0 on 2018-05-11; ESP module with ESP8266
+    Type "help()" for more information.
+    >>> a
+    42
+    >>> E
+    paste mode; Ctrl-C to cancel, Ctrl-D to finish
+    === a=43
+    === 
+    >>> a
+    43
     >>> 4**3**2
     262144
     >>> exit
     ### closed ###
-    
-    $ 
-    
-
+    $
 
 Technical details
 -----------------
