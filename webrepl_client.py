@@ -94,11 +94,13 @@ while running:
         while ws.sock and ws.sock.connected:
             inp = do_input('')
 
-            if (len(inp) != 1) or ((inp[0] < 'A') and (inp[0] > '\x05')) or (inp[0] > 'E'):
+            if (len(inp) != 1):
+                inp += "\r\n"
+            elif ((inp[0] > '\x05') and (inp[0] < 'A'))  or (inp[0] > 'E'):
                 inp += "\r\n"
             else:
                 if (inp[0] > '\x05'):
-                    inp = chr(ord(inp[0])-64) 
+                    inp = chr(ord(inp[0])-64)
                 if raw_mode:
                     if (inp[0] == '\x02'):
                         normal_mode = True
