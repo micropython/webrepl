@@ -94,8 +94,16 @@ def on_message(ws, message):
             inp = ""
     if debug:
         print("[%s,%d,%s]" % (message, ord(message[0]), inp))
-    if inp == '' and prompt != '' and message.endswith(prompt):
-        prompt_seen = True
+    if inp == '' and prompt != '':
+        if message.endswith(prompt):
+            prompt_seen = True
+        elif normal_mode:
+            if message.endswith("... "):
+                prompt = ""
+            elif message.endswith(">>> "):
+                prompt = ">>> "
+                prompt_seen = True
+    if prompt_seen:
         sys.stdout.write(message[:-len(prompt)])
     else:
         sys.stdout.write(message)
@@ -126,6 +134,7 @@ def on_open(ws):
         global prompt
         global prompt_seen
         running = True
+        injected = False
         do_input = getpass.getpass
 
         while running:
@@ -180,8 +189,9 @@ def on_open(ws):
                 else:
                     if ws.sock and ws.sock.connected:
                         ws.send(inp)
-                        if prompt == "" and not(raw_mode):
+                        if prompt == "" and not(raw_mode) and not(injected):
                             inp += '\x03\x02'
+                            injected = True
                             ws.send('\x03\x02')
                     else:
                         running = False
