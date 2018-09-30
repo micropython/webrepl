@@ -137,7 +137,7 @@ def on_open(ws):
                         sys.stdout.flush()
                 prompt_seen = False
 
-                if (prompt == "Password: ") and (passwd != None):
+                if prompt == "Password: " and passwd is not None:
                     inp = passwd
                     sys.stdout.write("Password: ")
                     sys.stdout.flush()
@@ -169,7 +169,7 @@ def on_open(ws):
 
                 do_input = getpass.getpass if raw_mode else input
 
-                if prompt == "Password: ":  #do initial CTRL-C CTRL-B injection
+                if prompt == "Password: ":  # initial "CTRL-C CTRL-B" injection
                     prompt = ""
                 else:
                     prompt = "=== " if paste_mode else ">>> "[4*int(raw_mode):]
