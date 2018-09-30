@@ -27,6 +27,8 @@ def help(rc=0):
     print("  [-p password] [-dbg] [-r] <host> - remote shell (to <host>:8266)")
     print("Examples:")
     print("  %s 192.168.4.1" % exename)
+    print("  %s -p abcd 192.168.4.1" % exename)
+    print("  %s -p abcd -r 192.168.4.1 < <(sleep 1 && echo \"...\")" % exename)
     print("Special command control sequences:")
     print("  line with single characters")
     print("    'A' .. 'E' - use when CTRL-A .. CTRL-E needed")

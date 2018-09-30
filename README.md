@@ -55,6 +55,8 @@ Run just command for usage information:
       [-p password] [-dbg] [-r] <host> - remote shell (to <host>:8266)
     Examples:
       webrepl_client.py 192.168.4.1
+      webrepl_client.py -p abcd 192.168.4.1
+      webrepl_client.py -p abcd -r 192.168.4.1 < <(sleep 1 && echo "...")
     Special command control sequences:
       line with single characters
         'A' .. 'E' - use when CTRL-A .. CTRL-E needed
@@ -138,6 +140,7 @@ Sample session with password on command line and redirect:
     >>> c(7)
     343
     >>> exit
+    ### closed ###
     $
 
 Technical details
