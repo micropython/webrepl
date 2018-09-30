@@ -7,14 +7,17 @@ import sys
 import readline
 import getpass
 import websocket
-import threading
+
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 from time import sleep
 
 try:                   # from https://stackoverflow.com/a/7321970
     input = raw_input  # Fix Python 2.x.
 except NameError:
     pass
-do_input = getpass.getpass
 
 
 def help(rc=0):
@@ -30,45 +33,59 @@ def help(rc=0):
     print('  just "exit" - end shell')
     sys.exit(rc)
 
-if len(sys.argv) not in (2, 2):
+if len(sys.argv) != 2:
     help(1)
 
-running = True
 inp = ""
 raw_mode = False
 normal_mode = True
 paste_mode = False
+prompt = "Password: "
+prompt_seen = False
 
 
 def on_message(ws, message):
     global inp
-    if (len(inp) == 1) and ord(inp[0]) <= 5:
-        inp = "\r\n" if (inp != '\x04') else "\x04"
-    while (inp != "") and (message != "") and (inp[0] == message[0]):
+    global raw_mode
+    global normal_mode
+    global paste_mode
+    global prompt
+    global prompt_seen
+    if len(inp) == 1 and ord(inp[0]) <= 5:
+        inp = "\r\n" if inp != '\x04' else "\x04"
+    while inp != "" and message != "" and inp[0] == message[0]:
         inp = inp[1:]
         message = message[1:]
-    if (message != ""):
-        if not(raw_mode) or (inp != "\x04"):
+    if message != "":
+        if not(raw_mode) or inp != "\x04":
             inp = ""
     if raw_mode:
-        if (message == "OK"):
+        if message == "OK":
             inp = "\x04\x04"
-        elif (message == "OK\x04"):
+        elif message == "OK\x04":
             message = "OK"
             inp = "\x04"
-        elif (message == "OK\x04\x04"):
+        elif message == "OK\x04\x04":
             message = "OK"
             inp = ""
-        elif (message == "OK\x04\x04>"):
+        elif message == "OK\x04\x04>":
             message = "OK>"
             inp = ""
-    if True:
-        sys.stdout.write(message)
-    else:
+    if False:
         print("[%s,%d,%s]" % (message, ord(message[0]), inp))  # for debug
+    if inp == '' and prompt != '' and message.endswith(prompt):
+        prompt_seen = True
+        sys.stdout.write(message[:-len(prompt)])
+    else:
+        sys.stdout.write(message)
     sys.stdout.flush()
-    if paste_mode and (message == "=== "):
+    if paste_mode and message == "=== ":
         inp = "\n"
+
+
+def on_error(ws, error):
+    sys.stdout.write("### error("+error+") ###\n")
+    sys.stdout.flush()
 
 
 def on_close(ws):
@@ -77,69 +94,80 @@ def on_close(ws):
     ws.close()
     sys.exit(1)
 
-websocket.enableTrace(False)
-ws = websocket.WebSocketApp("ws://"+sys.argv[1]+":8266", on_message=on_message,
-                            on_close=on_close)
-wst = threading.Thread(target=ws.run_forever)
-wst.daemon = True
-wst.start()
 
-conn_timeout = 5
-while ws.sock and not ws.sock.connected and conn_timeout:
-    sleep(1)
-    conn_timeout -= 1
+def on_open(ws):
+    def run(*args):
+        global input
+        global inp
+        global raw_mode
+        global normal_mode
+        global paste_mode
+        global prompt
+        global prompt_seen
+        running = True
+        do_input = getpass.getpass
 
-while running:
-    try:
-        while ws.sock and ws.sock.connected:
-            inp = do_input('')
+        while running:
+            while ws.sock and ws.sock.connected:
+                while prompt and not(prompt_seen):
+                    sleep(0.1)
+                    if False:                             # for debug
+                        sys.stdout.write(":"+prompt+";")
+                        sys.stdout.flush()
+                prompt_seen = False
 
-            if (len(inp) != 1):
-                inp += "\r\n"
-            elif ((inp[0] > '\x05') and (inp[0] < 'A'))  or (inp[0] > 'E'):
-                inp += "\r\n"
-            else:
-                if (inp[0] > '\x05'):
-                    inp = chr(ord(inp[0])-64)
-                if raw_mode:
-                    if (inp[0] == '\x02'):
-                        normal_mode = True
-                        raw_mode = False
-                elif (normal_mode):
-                    if (inp[0] == '\x01'):
-                        raw_mode = True
-                        normal_mode = False
-                    elif (inp[0] == '\x05'):
-                        paste_mode = True
-                        normal_mode = False
+                inp = do_input(prompt)
 
-            do_input = getpass.getpass if raw_mode else input
-
-            if inp == "exit\r\n":
-                running = False
-                break
-            else:
-                if ws.sock and ws.sock.connected:
-                    ws.send(inp)
+                if len(inp) != 1 or inp[0] < 'A' or inp[0] > 'E':
+                    inp += "\r\n"
                 else:
+                    inp = chr(ord(inp[0])-64)
+                    if raw_mode:
+                        if inp[0] == '\x02':
+                            normal_mode = True
+                            raw_mode = False
+                    elif normal_mode:
+                        if inp[0] == '\x01':
+                            raw_mode = True
+                            normal_mode = False
+                        elif inp[0] == '\x05':
+                            paste_mode = True
+                            normal_mode = False
+                    else:
+                        if inp[0] == '\x03' or inp[0] == '\x04':
+                            normal_mode = True
+                            paste_mode = False
+
+                do_input = getpass.getpass if raw_mode else input
+
+                if prompt == "Password: ": # do initial CTRL-C CTRL-B injection
+                    prompt = ""
+                else:
+                    prompt = "=== " if paste_mode else ">>> "[4*int(raw_mode):]
+
+                if inp == "exit\r\n":
                     running = False
-        running = False
-    except KeyboardInterrupt:
-        if ws.sock and ws.sock.connected:
-            ws.send("\x03")
-            if paste_mode:
-                normal_mode = True
-                paste_mode = False
-        else:
+                    break
+                else:
+                    if ws.sock and ws.sock.connected:
+                        ws.send(inp)
+                        if prompt == "" and not(raw_mode):
+                            inp += '\x03\x02'
+                            ws.send('\x03\x02')
+                    else:
+                        running = False
             running = False
-    except EOFError:
-        if ws.sock and ws.sock.connected:
-            ws.send("\x04")
-            if paste_mode:
-                normal_mode = True
-                paste_mode = False
-        else:
-            running = False
-ws.close()
-sys.exit(1)
+        ws.close()
+        sys.exit(1)
+    thread.start_new_thread(run, ())
+
+
+if __name__ == "__main__":
+    websocket.enableTrace(False)
+    ws = websocket.WebSocketApp("ws://"+sys.argv[1]+":8266",
+                                on_message=on_message,
+                                on_error=on_error,
+                                on_close=on_close)
+    ws.on_open = on_open
+    ws.run_forever()
 
