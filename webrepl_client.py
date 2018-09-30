@@ -24,17 +24,14 @@ def help(rc=0):
     exename = sys.argv[0].rsplit("/", 1)[-1]
     print("%s - remote shell using MicroPython WebREPL protocol" % exename)
     print("Arguments:")
-    print("  <host> - open remote shell (to <host>:8266)")
+    print("  [-p password] [-dbg] [-r] <host> - remote shell (to <host>:8266)")
     print("Examples:")
     print("  %s 192.168.4.1" % exename)
     print("Special command control sequences:")
     print("  line with single characters")
-    print("    'A' .. 'E' - CTRL-A .. CTRL-E")
+    print("    'A' .. 'E' - use when CTRL-A .. CTRL-E needed")
     print('  just "exit" - end shell')
     sys.exit(rc)
-
-if len(sys.argv) != 2:
-    help(1)
 
 inp = ""
 raw_mode = False
@@ -42,6 +39,30 @@ normal_mode = True
 paste_mode = False
 prompt = "Password: "
 prompt_seen = False
+passwd = None
+debug = False
+redirect = False
+
+for i in range(len(sys.argv)):
+    if sys.argv[i] == '-p':
+        sys.argv.pop(i)
+        passwd = sys.argv.pop(i)
+        break
+
+for i in range(len(sys.argv)):
+    if sys.argv[i] == '-dbg':
+        sys.argv.pop(i)
+        debug = True
+        break
+
+for i in range(len(sys.argv)):
+    if sys.argv[i] == '-r':
+        sys.argv.pop(i)
+        redirect = True
+        break
+
+if len(sys.argv) != 2:
+    help(1)
 
 
 def on_message(ws, message):
@@ -71,8 +92,8 @@ def on_message(ws, message):
         elif message == "OK\x04\x04>":
             message = "OK>"
             inp = ""
-    if False:
-        print("[%s,%d,%s]" % (message, ord(message[0]), inp))  # for debug
+    if debug:
+        print("[%s,%d,%s]" % (message, ord(message[0]), inp))
     if inp == '' and prompt != '' and message.endswith(prompt):
         prompt_seen = True
         sys.stdout.write(message[:-len(prompt)])
@@ -111,12 +132,20 @@ def on_open(ws):
             while ws.sock and ws.sock.connected:
                 while prompt and not(prompt_seen):
                     sleep(0.1)
-                    if False:                             # for debug
+                    if debug:
                         sys.stdout.write(":"+prompt+";")
                         sys.stdout.flush()
                 prompt_seen = False
 
-                inp = do_input(prompt)
+                if (prompt == "Password: ") and (passwd != None):
+                    inp = passwd
+                    sys.stdout.write("Password: ")
+                    sys.stdout.flush()
+                else:
+                    inp = do_input(prompt)
+                    if redirect:
+                        sys.stdout.write(inp+"\n")
+                        sys.stdout.flush()
 
                 if len(inp) != 1 or inp[0] < 'A' or inp[0] > 'E':
                     inp += "\r\n"
@@ -140,7 +169,7 @@ def on_open(ws):
 
                 do_input = getpass.getpass if raw_mode else input
 
-                if prompt == "Password: ": # do initial CTRL-C CTRL-B injection
+                if prompt == "Password: ":  #do initial CTRL-C CTRL-B injection
                     prompt = ""
                 else:
                     prompt = "=== " if paste_mode else ">>> "[4*int(raw_mode):]
