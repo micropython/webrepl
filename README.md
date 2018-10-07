@@ -45,7 +45,7 @@ webrepl_cli.py can't transfer files, and vice versa.
 WebREPL shell
 ---------------------
 
-webrepl_client.py provides remote shell using MicroPython WebREPL protocol, and runs with Python 2 as well as Python 3.
+webrepl_client.py provides remote shell using MicroPython WebREPL protocol, and runs with Python 2 as well as Python 3. With wireless connection to MicroPython it is OTA shell (Over-the-air), the main difference to screen WebREPL terminal session.
 
 Run just command for usage information:
 
