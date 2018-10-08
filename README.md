@@ -143,6 +143,11 @@ Sample session with password on command line and redirect:
     ### closed ###
     $
 
+
+Both, webrepl_cli.py as well as webrepl_client.py, do not run on MicroPython. Using danni's uwebsockets repo a simple (OTA) shell can be run from one MicroPython module on a second MicroPython module:
+https://forum.micropython.org/viewtopic.php?f=2&p=30829#p30829
+
+
 Technical details
 -----------------
 
