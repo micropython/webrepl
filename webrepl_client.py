@@ -198,7 +198,7 @@ def on_open(ws):
                     else:
                         running = False
             running = False
-        ws.close()
+        ws.sock.close()
         sys.exit(1)
     thread.start_new_thread(run, ())
 
