@@ -39,6 +39,7 @@
     background: #888;
   }
 </style>
+<script src="jquery.min.js"></script>
 <script src="term.js"></script>
 <script src="FileSaver.js"></script>
 </head>
@@ -49,6 +50,10 @@
 <input type="text" name="webrepl_url" id="url" value="ws://192.168.4.1:8266/" />
 <input type="submit" id="button" value="Connect" onclick="button_click(); return false;" />
 </form>
+<div id="connection_history">
+  connection history:
+</div>
+
 <div id="term">
 </div>
 </div>
@@ -127,6 +132,24 @@ function show_https_warning() {
         term.resize(term.cols, term.rows - 7);
     }
 }
+
+$.getJSON("connection_history.json", function (data){
+    var conn = document.getElementById("connection_history");
+    $.each(data, function (infoIndex, info){
+        var new_conn = document.createElement("input");
+        new_conn.type = "submit";
+        new_conn.value = info["url"];
+        new_conn.onclick = function() {
+            if (connected) {
+                alert("Already connected, click 'Disconnect' first!")
+                return;
+            }
+            document.getElementById('url').value = new_conn.value;
+            button_click();
+        }
+        conn.appendChild(new_conn);
+    })
+})
 
 function button_click() {
     if (connected) {
