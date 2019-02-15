@@ -141,13 +141,13 @@ $.getJSON("connection_history.json", function (data){
     $.each(data, function (infoIndex, info){
         var new_conn = document.createElement("input");
         new_conn.type = "submit";
-        new_conn.value = info["url"];
+        new_conn.value = info["name"];
         new_conn.onclick = function() {
             if (connected) {
                 alert("Already connected, click 'Disconnect' first!")
                 return;
             }
-            document.getElementById('url').value = new_conn.value;
+            document.getElementById('url').value = info["url"];
             button_click();
         }
         conn.appendChild(new_conn);
