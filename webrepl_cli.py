@@ -9,8 +9,8 @@ except ImportError:
     import socket
 import websocket_helper
 
-# Define to 1 to use builtin "websocket" module of MicroPython
-USE_BUILTIN_WEBSOCKET = 0
+# Define to 1 to use builtin "uwebsocket" module of MicroPython
+USE_BUILTIN_UWEBSOCKET = 0
 # Treat this remote directory as a root for file transfers
 SANDBOX = ""
 #SANDBOX = "/tmp/webrepl/"
@@ -27,8 +27,8 @@ def debugmsg(msg):
         print(msg)
 
 
-if USE_BUILTIN_WEBSOCKET:
-    from websocket import websocket
+if USE_BUILTIN_UWEBSOCKET:
+    from uwebsocket import websocket
 else:
     class websocket:
 
