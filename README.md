@@ -42,6 +42,112 @@ WebREPL connection, so while webrepl.html is connected to device,
 webrepl_cli.py can't transfer files, and vice versa.
 
 
+WebREPL shell
+---------------------
+
+webrepl_client.py provides remote shell using MicroPython WebREPL protocol, and runs with Python 2 as well as Python 3. With wireless connection to MicroPython it is OTA shell (Over-the-air), the main difference to screen WebREPL terminal session.
+
+Run just command for usage information:
+
+    $ ./webrepl_client.py 
+    webrepl_client.py - remote shell using MicroPython WebREPL protocol
+    Arguments:
+      [-p password] [-dbg] [-r] <host> - remote shell (to <host>:8266)
+    Examples:
+      webrepl_client.py 192.168.4.1
+      webrepl_client.py -p abcd 192.168.4.1
+      webrepl_client.py -p abcd -r 192.168.4.1 < <(sleep 1 && echo "...")
+    Special command control sequences:
+      line with single characters
+        'A' .. 'E' - use when CTRL-A .. CTRL-E needed
+      just "exit" - end shell
+    $
+
+* "-p" option allows to pass password instead of entering via keyboard, allowing for automation.
+* "-r" option tells webrepl_client.py that input will be provided by redirection, and that command lines need to be printed (not needed when input is done via keyboard). See last sample execution on how to paste in python code from file and use (without need to upload a module before).
+* "-dbg" option enables additional debug output in case webrepl_client.py has a problem and is not needed normally.
+
+Previous section on only one active WebREPL connection applies here as well. So you can run shell, then exit, then upload a modified module with webrepl_cli.py to MicroPython, login again into shell and finally reload the module in shell.
+
+
+Input is invisible on password entry for WebREPL session, as well as in raw mode (raw mode is not available in webrepl.html). Commands can be edited on input, and command history is available.
+
+CTRL-A, CTRL-B, CTRL-C, CTRL-D and CTRL-E on empty line switch between modes. For webrepl_client.py these have to be entered by A+ENTER, B+ENTER, C+ENTER, D+ENTER, E+ENTER.
+
+Normal mode is correct, as well as paste mode. Raw mode has invisible input, and output ">" is followed by "OK>" for every press of CTRL-D. Only difference to screen session is, that each completed line produces a new line.
+
+Although not documented in raw mode python help, CTRL-D is needed (as in paste mode) before CTRL-B to switch to normal mode, to commit the input lines sofar. CTRL-D can be pressed multiple times before CTRL-B. Beware that you need to have at least one line of input present, otherwise CTRL-D will do a soft reset on target platform.
+
+Soft reset on target platform (by machine.reset() or by CTRL-D on empty input line) hangs webrepl_client.py session as well as webrepl.html browser session.
+
+Because Micropython issue https://github.com/micropython/micropython/issues/4196 initial WebREPL prompt on (re)connect is always ">>> ", regardless of real mode (raw/normal/paste). Since webrepl_client.py needs to wait for prompt being received from target in order to do correct and editable input via "do_input(prompt)", issue 4196 is problematic. Currently this issue is resolved by automatically injecting "CTRL-C CTRL-B" after password has been entered, ending always in normal mode. Because of the "CTRL-B" you see the MicoPython version string message on (re)connect. The injection also helps on terminating endless loops, which was possible before fix of issue 1. Now on endless loop, press "CTRL-C" to terminate webrepl_client.py and reconnect again. The initial injected "CTRL-C" will stop the endless loop and provide REPL prompt.
+
+Sample session with mode changes and invisible password and raw mode input:
+
+    $ ./webrepl_client.py 192.168.4.1
+    Password: 
+    
+    WebREPL connected
+    >>> 
+    >>> 
+    MicroPython v1.9.4-481-g3cd2c281d on 2018-09-04; ESP module with ESP8266
+    Type "help()" for more information.
+    >>> A
+    raw REPL; CTRL-B to exit
+    >
+    
+    OK>
+    MicroPython v1.9.4-481-g3cd2c281d on 2018-09-04; ESP module with ESP8266
+    Type "help()" for more information.
+    >>> a
+    42
+    >>> E
+    paste mode; Ctrl-C to cancel, Ctrl-D to finish
+    === a=43
+    === C
+    >>> a
+    42
+    >>> E
+    paste mode; Ctrl-C to cancel, Ctrl-D to finish
+    === a=43
+    === D
+    
+    >>> a
+    43
+    >>> 4**3**2
+    262144
+    >>> exit
+    ### closed ###
+    $
+
+Sample session with password on command line and redirect:
+
+    $ ./webrepl_client.py -p abcd -r 192.168.4.1 < <(sleep 1 && echo "E" && cat sc.py && echo -e "D\nc(7)\nexit")
+    Password:
+    WebREPL connected
+    >>>
+    >>>
+    MicroPython v1.9.4-481-g3cd2c281d on 2018-09-04; ESP module with ESP8266
+    Type "help()" for more information.
+    >>> E
+    paste mode; Ctrl-C to cancel, Ctrl-D to finish
+    === def s(x):
+    ===     return x*x
+    === def c(x):
+    ===     return x*s(x)
+    === D
+    
+    >>> c(7)
+    343
+    >>> exit
+    ### closed ###
+    $
+
+
+Both, webrepl_cli.py as well as webrepl_client.py, do not run on MicroPython. Using danni's uwebsockets repo a simple (OTA) shell can be run from one MicroPython module on a second MicroPython module:
+https://forum.micropython.org/viewtopic.php?f=2&p=30829#p30829
+
+
 Technical details
 -----------------
 
