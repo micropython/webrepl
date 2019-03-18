@@ -58,6 +58,8 @@
   <div class="file-box">
     <strong>Send a file</strong>
     <input type="file" id="put-file-select" />
+    <strong>Destination path</strong>
+    <input type="text" name="set_filepath" id="put_filepath" value="." size="13" />
     <div id="put-file-list"></div>
     <input type="button" value="Send to device" id="put-file-button" onclick="put_file(); return false;" />
   </div>
@@ -85,6 +87,7 @@ var ws;
 var connected = false;
 var binary_state = 0;
 var put_file_name = null;
+var put_file_path = null;
 var put_file_data = null;
 var get_file_name = null;
 var get_file_data = null;
@@ -273,7 +276,9 @@ function decode_resp(data) {
 
 function put_file() {
     var dest_fname = put_file_name;
+    var dest_fpath = document.getElementById('put_filepath').value;
     var dest_fsize = put_file_data.length;
+    var dest_full_fname = dest_fpath + '/' + dest_fname;
 
     // WEBREPL_FILE = "<2sBBQLH64s"
     var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
@@ -281,12 +286,17 @@ function put_file() {
     rec[1] = 'A'.charCodeAt(0);
     rec[2] = 1; // put
     rec[3] = 0;
-    rec[4] = 0; rec[5] = 0; rec[6] = 0; rec[7] = 0; rec[8] = 0; rec[9] = 0; rec[10] = 0; rec[11] = 0;
-    rec[12] = dest_fsize & 0xff; rec[13] = (dest_fsize >> 8) & 0xff; rec[14] = (dest_fsize >> 16) & 0xff; rec[15] = (dest_fsize >> 24) & 0xff;
-    rec[16] = dest_fname.length & 0xff; rec[17] = (dest_fname.length >> 8) & 0xff;
+    rec[4] = 0; rec[5] = 0; rec[6] = 0; rec[7] = 0; rec[8] = 0; rec[9] = 0;
+    rec[10] = 0; rec[11] = 0;
+    rec[12] = dest_fsize & 0xff;
+    rec[13] = (dest_fsize >> 8) & 0xff;
+    rec[14] = (dest_fsize >> 16) & 0xff;
+    rec[15] = (dest_fsize >> 24) & 0xff;
+    rec[16] = dest_full_fname.length & 0xff;
+    rec[17] = (dest_full_fname.length >> 8) & 0xff;
     for (var i = 0; i < 64; ++i) {
-        if (i < dest_fname.length) {
-            rec[18 + i] = dest_fname.charCodeAt(i);
+        if (i < dest_full_fname.length) {
+            rec[18 + i] = dest_full_fname.charCodeAt(i);
         } else {
             rec[18 + i] = 0;
         }
