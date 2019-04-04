@@ -8,19 +8,35 @@
   Copyright (c) 2016, Paul Sokolovsky
 -->
 <style>
-  html {
+    html {
     background: #555;
-  }
+    }
 
-  h1 {
+    h1 {
     margin-bottom: 20px;
     font: 20px/1.5 sans-serif;
-  }
-  .logo {
+    }
+    .logo {
     position: absolute;
     bottom: 10px;
     right: 10px;
-  }
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+      border: 1px solid #ddd;
+    }
+
+    ul li {
+      padding: 8px 4px;
+      border-bottom: 1px solid #ddd;
+      cursor: pointer;
+    }
+
+    ul li:last-child {
+      border-bottom: none;
+      cursor: pointer;
+    }
 /*
   .terminal {
     float: left;
@@ -37,11 +53,16 @@
   }
 */
 
-  .file-box {
+    .file-box {
     margin: 4px;
     padding: 4px;
     background: #888;
-  }
+    }
+
+    i.x {
+    background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNSIgaGVpZ2h0PSIyNSI+PHBhdGggZD0iTTIuMTggNy42MWw1LjI3My00LjQ1NSA1LjYwMiA0LjczMiA1LjYwMi00LjczMkwyMy45MyA3LjYxbC01LjYwMiA0LjczMiA1LjYwMiA0LjczMi01LjI3MyA0LjQ1NS01LjYwMi00LjczMi01LjYwMiA0LjczMi01LjI3My00LjQ1NSA1LjYwMi00LjczMkwyLjE4IDcuNjF6IiBmaWxsPSJyZWQiLz48L3N2Zz4=") no-repeat left center;
+    padding: 5px 0 5px 25px;
+    }
 </style>
 <script src="term.js"></script>
 <script src="FileSaver.js"></script>
@@ -77,6 +98,10 @@
 
   <div class="file-box" id="link-gen" style="margin-top: 20px;"><button onClick='buildLink()'>Generate auto connect / login link</button></div>
 
+  <div class="file-box" id="cont-saved-sessions" style="margin-top: 20px;">Saved Sessions: <ul><span id='saved-sessions'></span></ul><br><br>
+    <button style="vertical-align:bottom;" onClick="addSession()">ADD</button> <button style="vertical-align:bottom;" onClick="resetSessons()">Reset</button>
+  </div>
+
 </div>
 
 <br clear="both" />
@@ -104,6 +129,8 @@ var put_file_data = null;
 var get_file_name = null;
 var get_file_data = null;
 var version = null;
+var jurl = null;
+var sessionList = null;
 
 function calculate_size(win) {
     var cols = Math.max(80, Math.min(150, (win.innerWidth - 280) / 7)) | 0;
@@ -111,25 +138,106 @@ function calculate_size(win) {
     return [cols, rows];
 }
 
-var jurl = null;
 
 function buildLink()
 {
-    var j = {"url":"","pass":"","autoconnect":"True"};
+    var j = {"url":"","pass":"","autoconnect":true};
     j.url = prompt("Enter URL:", document.getElementById('url').value);
     j.pass = prompt("Enter Password:");
     j.autoconnect = confirm("Enable AutoConnect?");
-
     window.location.hash = JSON.stringify(j);
+}
+
+// localStorage.setItem("lastname", "Smith");
+function addSession() {
+if (typeof(Storage) === "undefined") {
+    console.error("[ERROR] No localStorage");
+    return;
+}
+
+var j = {"url":"","pass":"","autoconnect":true};
+j.url = prompt("Enter URL:", document.getElementById('url').value);
+j.pass = prompt("Enter Password:");
+j.autoconnect = confirm("Enable AutoConnect?");
+
+if(j.url == null){
+    alert('[ERROR] URL is empty!');
+    return;
+}
+
+loadSessions();
+
+for (i in sessionList) {
+    var u = sessionList[i].url;
+    if(u == j.url) {
+        alert('Already exists!');
+        return;
+    }
+}
+sessionList.push(j);
+localStorage.setItem('sessionList', JSON.stringify(sessionList));
+
+loadSessionList();
+}
+
+function resetSessons() {
+    localStorage.setItem('sessionList', '');
+    sessionList = null;
+    document.getElementById('saved-sessions').innerHTML = '';
+}
+
+function loadSessions() {
+if (typeof(Storage) === "undefined") {
+    console.error("[ERROR] No localStorage");
+    return;
+}
+try {
+    sessionList = JSON.parse(localStorage.getItem('sessionList'));
+} catch(error) {
+    console.error(error);
+    if(typeof sessionList === 'undefined' || sessionList === null) {
+        sessionList = [];
+        localStorage.setItem('sessionList', JSON.stringify(sessionList));
+        return;
+    }
+    return;
+}
+return;
+}
+
+function loadSessionList() {
+    var s = document.getElementById('saved-sessions');
+    s.innerHTML = "";
+
+    for (var i in sessionList) {
+        var tu = sessionList[i].url.replace('ws://','');
+        s.innerHTML = s.innerHTML + "<li onClick='connectSession(this);' lang='"+i+"'>" + tu + "<span lang='"+i+"' onClick='deleteSession(this);' style='float: right;cursor: pointer;'><i class='x'/></span></li>";
+    }
+}
+
+function connectSession(e) {
+    console.log('Connecting to: ' + sessionList[e.lang].url);
+    var s = sessionList[e.lang];
 
 
+    jurl = {"url":s.url,"pass":s.pass,"autoconnect":s.autoconnect};
+    document.getElementById('url').disabled = true;
+    document.getElementById('button').value = "Disconnect";
+    connected = true;
+    document.getElementById('url').value = jurl.url;
+    connect(jurl.url);
+}
+
+function deleteSession(e) {
+    sessionList.splice(e.lang, 1);
+    localStorage.setItem('sessionList', JSON.stringify(sessionList));
+    loadSessionList();
 }
 
 (function() {
     window.onload = function() {
       try {
         jurl = JSON.parse(decodeURI(window.location.hash.substring(1)));
-        console.log(jurl);
 
         if(jurl.url) {
             document.getElementById('url').value = jurl.url;
@@ -137,10 +245,9 @@ function buildLink()
                 setTimeout(function() { button_click(); }, 100);
             }
         }
-
       }
       catch(error) {
-        console.log(error);
+        console.error(error);
         console.log("Attempting Alt Method of URL parsing.");
         var url = window.location.hash.substring(1);
         if (url) {
@@ -149,8 +256,9 @@ function buildLink()
       }
       
 
+      loadSessions();
+      loadSessionList();
       
-
       var size = calculate_size(self);
       term = new Terminal({
         cols: size[0],
@@ -327,20 +435,24 @@ function connect(url) {
 }
 
 function managePasswordReq(data) {
-    if(typeof data == 'string' && data.indexOf('Password:') > -1 && jsonExists(jurl, 'pass')) {
+    if(typeof data == 'string' && data.indexOf('Password:') > -1 && jsonKeyExists(jurl, 'pass')) {
         term.write('\x1b[36mAttempting AutoLogin\x1b[m\r\n');
         term.send(jurl.pass + "\r");
     }
 }
 
-function jsonExists(pri, key) {
+function jsonKeyExists(pri, key) {
     if(typeof pri === 'undefined' || pri === null) {
         return false;
-    }else{
+    }else {
         if(jurl.hasOwnProperty(key)) {
             return true;
         }
     }
+}
+
+function jsonExists(pri) {
+    if(typeof pri === 'undefined' || pri === null) { return false; }else { return true; }
 }
 
 function decode_resp(data) {
