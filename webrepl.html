@@ -8,15 +8,35 @@
   Copyright (c) 2016, Paul Sokolovsky
 -->
 <style>
-  html {
+    html {
     background: #555;
-  }
+    }
 
-  h1 {
+    h1 {
     margin-bottom: 20px;
     font: 20px/1.5 sans-serif;
-  }
+    }
+    .logo {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+      border: 1px solid #ddd;
+    }
 
+    ul li {
+      padding: 8px 4px;
+      border-bottom: 1px solid #ddd;
+      cursor: pointer;
+    }
+
+    ul li:last-child {
+      border-bottom: none;
+      cursor: pointer;
+    }
 /*
   .terminal {
     float: left;
@@ -33,11 +53,16 @@
   }
 */
 
-  .file-box {
+    .file-box {
     margin: 4px;
     padding: 4px;
     background: #888;
-  }
+    }
+
+    i.x {
+    background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNSIgaGVpZ2h0PSIyNSI+PHBhdGggZD0iTTIuMTggNy42MWw1LjI3My00LjQ1NSA1LjYwMiA0LjczMiA1LjYwMi00LjczMkwyMy45MyA3LjYxbC01LjYwMiA0LjczMiA1LjYwMiA0LjczMi01LjI3MyA0LjQ1NS01LjYwMi00LjczMi01LjYwMiA0LjczMi01LjI3My00LjQ1NSA1LjYwMi00LjczMkwyLjE4IDcuNjF6IiBmaWxsPSJyZWQiLz48L3N2Zz4=") no-repeat left center;
+    padding: 5px 0 5px 25px;
+    }
 </style>
 <script src="term.js"></script>
 <script src="FileSaver.js"></script>
@@ -48,6 +73,7 @@
 <form>
 <input type="text" name="webrepl_url" id="url" value="ws://192.168.4.1:8266/" />
 <input type="submit" id="button" value="Connect" onclick="button_click(); return false;" />
+<span id="version"></span>
 </form>
 <div id="term">
 </div>
@@ -70,11 +96,25 @@
 
   <div class="file-box" id="file-status"><span style="color:#707070">(file operation status)</span></div>
 
+  <div class="file-box" id="link-gen" style="margin-top: 20px;"><button onClick='buildLink()'>Generate auto connect / login link</button></div>
+
+  <div class="file-box" id="cont-saved-sessions" style="margin-top: 20px;">Saved Sessions: <ul><span id='saved-sessions'></span></ul><br><br>
+    <button style="vertical-align:bottom;" onClick="addSession()">ADD</button> <button style="vertical-align:bottom;" onClick="resetSessons()">Reset</button>
+  </div>
+
 </div>
 
 <br clear="both" />
 <i>Terminal widget should be focused (text cursor visible) to accept input. Click on it if not.</i><br/>
 <i>To paste, press Ctrl+A, then Ctrl+V</i>
+
+
+<a class="logo" href="http://micropython.org/">
+  <svg version="1.1" id="MicroPython" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+    x="0px" y="0px" viewBox="0 0 69 69" width="90px" xml:space="preserve">
+    <path fill="#ffffff" d="M36,0v54h-3V0H0v69h15V15h3v54h33V15h3v54h15V0H36z M64,63h-4v-7h4V63z"/>
+  </svg>
+</a>
 </body>
 
 <script>
@@ -88,6 +128,9 @@ var put_file_name = null;
 var put_file_data = null;
 var get_file_name = null;
 var get_file_data = null;
+var version = null;
+var jurl = null;
+var sessionList = null;
 
 function calculate_size(win) {
     var cols = Math.max(80, Math.min(150, (win.innerWidth - 280) / 7)) | 0;
@@ -95,12 +138,127 @@ function calculate_size(win) {
     return [cols, rows];
 }
 
+
+function buildLink()
+{
+    var j = {"url":"","pass":"","autoconnect":true};
+    j.url = prompt("Enter URL:", document.getElementById('url').value);
+    j.pass = prompt("Enter Password:");
+    j.autoconnect = confirm("Enable AutoConnect?");
+    window.location.hash = JSON.stringify(j);
+}
+
+// localStorage.setItem("lastname", "Smith");
+function addSession() {
+if (typeof(Storage) === "undefined") {
+    console.error("[ERROR] No localStorage");
+    return;
+}
+
+var j = {"url":"","pass":"","autoconnect":true};
+j.url = prompt("Enter URL:", document.getElementById('url').value);
+j.pass = prompt("Enter Password:");
+j.autoconnect = confirm("Enable AutoConnect?");
+
+if(j.url == null){
+    alert('[ERROR] URL is empty!');
+    return;
+}
+
+loadSessions();
+
+for (i in sessionList) {
+    var u = sessionList[i].url;
+    if(u == j.url) {
+        alert('Already exists!');
+        return;
+    }
+}
+sessionList.push(j);
+localStorage.setItem('sessionList', JSON.stringify(sessionList));
+
+loadSessionList();
+}
+
+function resetSessons() {
+    localStorage.setItem('sessionList', '');
+    sessionList = null;
+    document.getElementById('saved-sessions').innerHTML = '';
+}
+
+function loadSessions() {
+if (typeof(Storage) === "undefined") {
+    console.error("[ERROR] No localStorage");
+    return;
+}
+try {
+    sessionList = JSON.parse(localStorage.getItem('sessionList'));
+} catch(error) {
+    console.error(error);
+    if(typeof sessionList === 'undefined' || sessionList === null) {
+        sessionList = [];
+        localStorage.setItem('sessionList', JSON.stringify(sessionList));
+        return;
+    }
+    return;
+}
+return;
+}
+
+function loadSessionList() {
+    var s = document.getElementById('saved-sessions');
+    s.innerHTML = "";
+
+    for (var i in sessionList) {
+        var tu = sessionList[i].url.replace('ws://','');
+        s.innerHTML = s.innerHTML + "<li onClick='connectSession(this);' lang='"+i+"'>" + tu + "<span lang='"+i+"' onClick='deleteSession(this);' style='float: right;cursor: pointer;'><i class='x'/></span></li>";
+    }
+}
+
+function connectSession(e) {
+    console.log('Connecting to: ' + sessionList[e.lang].url);
+    var s = sessionList[e.lang];
+
+
+    jurl = {"url":s.url,"pass":s.pass,"autoconnect":s.autoconnect};
+    document.getElementById('url').disabled = true;
+    document.getElementById('button').value = "Disconnect";
+    connected = true;
+    document.getElementById('url').value = jurl.url;
+    connect(jurl.url);
+}
+
+function deleteSession(e) {
+    sessionList.splice(e.lang, 1);
+    localStorage.setItem('sessionList', JSON.stringify(sessionList));
+    loadSessionList();
+}
+
 (function() {
     window.onload = function() {
-      var url = window.location.hash.substring(1);
-      if (url) {
-        document.getElementById('url').value = 'ws://' + url;
+      try {
+        jurl = JSON.parse(decodeURI(window.location.hash.substring(1)));
+
+        if(jurl.url) {
+            document.getElementById('url').value = jurl.url;
+            if(jurl.autoconnect) {
+                setTimeout(function() { button_click(); }, 100);
+            }
+        }
       }
+      catch(error) {
+        console.error(error);
+        console.log("Attempting Alt Method of URL parsing.");
+        var url = window.location.hash.substring(1);
+        if (url) {
+        document.getElementById('url').value = 'ws://' + url;
+        }
+      }
+      
+
+      loadSessions();
+      loadSessionList();
+      
       var size = calculate_size(self);
       term = new Terminal({
         cols: size[0],
@@ -152,8 +310,16 @@ function update_file_status(s) {
     document.getElementById('file-status').innerHTML = s;
 }
 
-function connect(url) {
-    window.location.hash = url.substring(5);
+function connect(url) { 
+    if(typeof jurl === 'undefined' || jurl === null) {
+        window.location.hash = url.substring(5);
+    }else{
+        if(jurl.hasOwnProperty('url') && jurl.url !== url) {
+            window.location.hash = url.substring(5);
+        }
+    }
+
+
     ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
     ws.onopen = function() {
@@ -174,6 +340,9 @@ function connect(url) {
         term.write('\x1b[31mWelcome to MicroPython!\x1b[m\r\n');
 
         ws.onmessage = function(event) {
+            if (version == undefined && typeof event.data == 'string' && event.data.indexOf('WebREPL connected') > 0) {
+                get_ver();
+            }
             if (event.data instanceof ArrayBuffer) {
                 var data = new Uint8Array(event.data);
                 switch (binary_state) {
@@ -243,11 +412,14 @@ function connect(url) {
                         break;
                     case 31:
                         // first (and last) response for GET_VER
-                        console.log('GET_VER', data);
+                        //console.log('GET_VER', data);
+                        version = data.join('.');
+                        document.getElementById('version').innerText = 'MicroPython ' + version;
                         binary_state = 0;
                         break;
                 }
             }
+            managePasswordReq(event.data);
             term.write(event.data);
         };
     };
@@ -260,6 +432,27 @@ function connect(url) {
         term.off('data');
         prepare_for_connect();
     }
+}
+
+function managePasswordReq(data) {
+    if(typeof data == 'string' && data.indexOf('Password:') > -1 && jsonKeyExists(jurl, 'pass')) {
+        term.write('\x1b[36mAttempting AutoLogin\x1b[m\r\n');
+        term.send(jurl.pass + "\r");
+    }
+}
+
+function jsonKeyExists(pri, key) {
+    if(typeof pri === 'undefined' || pri === null) {
+        return false;
+    }else {
+        if(jurl.hasOwnProperty(key)) {
+            return true;
+        }
+    }
+}
+
+function jsonExists(pri) {
+    if(typeof pri === 'undefined' || pri === null) { return false; }else { return true; }
 }
 
 function decode_resp(data) {
