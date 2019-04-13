@@ -9,7 +9,9 @@ setup(name='webrepl_cli',
       author=u'MicroPython Team',
       author_email='contact@micropython.org',
       url='https://github.com/micropython/webrepl',
-      scripts=["webrepl_cli.py"],
+      entry_points={'console_scripts': [
+                            'webrepl-cli = webrepl_cli.cli:main'
+                        ]},
       license="MIT",
       keywords="micropython webrepl esp8266 esp32",
       packages=find_packages(),
