@@ -2835,7 +2835,7 @@ Terminal.prototype.keyDown = function(ev) {
           // ^] - group sep
           key = String.fromCharCode(29);
         }
-      } else if (ev.altKey) {
+      } else if (ev.altKey && !this.isMac) {
         if (ev.keyCode >= 65 && ev.keyCode <= 90) {
           key = '\x1b' + String.fromCharCode(ev.keyCode + 32);
         } else if (ev.keyCode === 192) {
@@ -2895,7 +2895,7 @@ Terminal.prototype.keyPress = function(ev) {
     return false;
   }
 
-  if (!key || ev.ctrlKey || ev.altKey || ev.metaKey) return false;
+  if (!key || ev.ctrlKey || (ev.altKey && !this.isMac) || ev.metaKey) return false;
 
   key = String.fromCharCode(key);
 
