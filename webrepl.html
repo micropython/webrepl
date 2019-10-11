@@ -111,6 +111,7 @@ function calculate_size(win) {
       });
       term.open(document.getElementById("term"));
       show_https_warning();
+      populate_recent_url();
     };
     window.addEventListener('resize', function() {
         var size = calculate_size(self);
@@ -130,6 +131,28 @@ function show_https_warning() {
         document.body.insertBefore(warningDiv, document.body.childNodes[0]);
         term.resize(term.cols, term.rows - 7);
     }
+}
+
+// Test if localStorage is available. via https://stackoverflow.com/questions/16427636
+function lsTest(){
+	var test = 'test';
+	try {
+		localStorage.setItem(test, test);
+		localStorage.removeItem(test);
+		return true;
+	} catch(e) {
+		return false;
+	}
+}
+
+function populate_recent_url() {
+	if (lsTest() === true) {
+		var recent_url = localStorage.getItem('recent_url');
+		if (recent_url) {
+			var input = document.getElementById('url');
+			input.value = recent_url;
+		}
+	}
 }
 
 function button_click() {
@@ -164,6 +187,11 @@ function connect(url) {
             data = data.replace(/\n/g, "\r");
             ws.send(data);
         });
+
+        // Record url for future use
+		if (lsTest() === true) {
+			localStorage.setItem('recent_url', url);
+		}
 
         term.on('title', function(title) {
             document.title = title;
