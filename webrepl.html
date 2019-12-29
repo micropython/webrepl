@@ -59,7 +59,7 @@
     <strong>Send a file</strong>
     <input type="file" id="put-file-select" />
     <div id="put-file-list"></div>
-    <input type="button" value="Send to device" id="put-file-button" onclick="put_file(); return false;" />
+    <input type="button" value="Send to device" id="put-file-button" onclick="reread_and_put_file(); return false;" />
   </div>
 
   <div class="file-box">
@@ -84,7 +84,8 @@ var term;
 var ws;
 var connected = false;
 var binary_state = 0;
-var put_file_name = null;
+var put_file_file = null;
+var put_file_lastMod = null;
 var put_file_data = null;
 var get_file_name = null;
 var get_file_data = null;
@@ -190,9 +191,10 @@ function connect(url) {
                     case 12:
                         // final response for put
                         if (decode_resp(data) == 0) {
-                            update_file_status('Sent ' + put_file_name + ', ' + put_file_data.length + ' bytes');
+                            update_file_status('Sent ' + put_file_file.name + ', ' +
+					       put_file_data.length + ' bytes');
                         } else {
-                            update_file_status('Failed sending ' + put_file_name);
+                            update_file_status('Failed sending ' + put_file_file.name);
                         }
                         binary_state = 0;
                         break;
@@ -272,7 +274,7 @@ function decode_resp(data) {
 }
 
 function put_file() {
-    var dest_fname = put_file_name;
+    var dest_fname = put_file_file.name;
     var dest_fsize = put_file_data.length;
 
     // WEBREPL_FILE = "<2sBBQLH64s"
@@ -294,7 +296,7 @@ function put_file() {
 
     // initiate put
     binary_state = 11;
-    update_file_status('Sending ' + put_file_name + '...');
+    update_file_status('Sending ' + put_file_file.name + '...');
     ws.send(rec);
 }
 
@@ -339,23 +341,56 @@ function get_ver() {
     ws.send(rec);
 }
 
+function reread_and_put_file() {
+    if(put_file) read_put_file(put_file_file,function(){put_file()});
+}
+
 function handle_put_file_select(evt) {
     // The event holds a FileList object which is a list of File objects,
     // but we only support single file selection at the moment.
     var files = evt.target.files;
-
+    put_file_file = files[0];
+    
     // Get the file info and load its data.
-    var f = files[0];
-    put_file_name = f.name;
+    put_file_lastMod = -1;	// reset
+    document.getElementById('put-file-button').disabled = false;
+    put_file_message('');
+}
+
+function put_file_changed(file) {
+    if (file && put_file_lastMod && file.lastModified !== put_file_lastMod) {
+	var initial = put_file_lastMod===-1; // Initial load?
+	put_file_lastMod = file.lastModified;
+	return initial ? 1 : true;
+    }
+    return false;
+}
+
+function put_file_message(msg, suffix) {
+    if (suffix) msg=escape(put_file.name) + ' - ' + put_file_data.length + ' bytes ' +msg;
+    document.getElementById('put-file-list').innerHTML = msg;
+}
+
+function read_put_file(file,callback) {
+    var changed = put_file_changed(file);
+    if (!changed) {
+	update_file_status("Unchanged: Re-choose file to resend",true);
+	return;
+    }
     var reader = new FileReader();
     reader.onload = function(e) {
         put_file_data = new Uint8Array(e.target.result);
-        document.getElementById('put-file-list').innerHTML = '' + escape(put_file_name) + ' - ' + put_file_data.length + ' bytes';
-        document.getElementById('put-file-button').disabled = false;
+	put_file_message(changed === true ? "[Changed]" : "",true);
+	if(changed && callback) callback();
     };
-    reader.readAsArrayBuffer(f);
+    reader.onerror= function(e) {
+	update_file_status("File Changed: Must Re-choose")
+	console.log("Error Reading File " + escape(put_file.name) + ': ',e.target.error);
+    }
+    reader.readAsArrayBuffer(file);
 }
-
+  
+  
 document.getElementById('put-file-select').addEventListener('click', function(){
     this.value = null;
 }, false);
