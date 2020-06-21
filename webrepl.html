@@ -47,7 +47,9 @@
 <div style="display:inline-block; vertical-align:top;">
 <form>
 <input type="text" name="webrepl_url" id="url" value="ws://192.168.4.1:8266/" />
-<input type="submit" id="button" value="Connect" onclick="button_click(); return false;" />
+<input type="submit" id="button" value="Connect (WebSocket)" onclick="button_click(); return false;" />
+<button id="SerialConnectButton" type="button" disabled>Connect (Web USB Serial)</button>
+
 </form>
 <div id="term">
 </div>
@@ -134,8 +136,10 @@ function show_https_warning() {
 
 function button_click() {
     if (connected) {
+	document.getElementById('SerialConnectButton').disabled = false;
         ws.close();
     } else {
+	document.getElementById('SerialConnectButton').disabled = true;
         document.getElementById('url').disabled = true;
         document.getElementById('button').value = "Disconnect";
         connected = true;
@@ -145,7 +149,7 @@ function button_click() {
 
 function prepare_for_connect() {
     document.getElementById('url').disabled = false;
-    document.getElementById('button').value = "Connect";
+    document.getElementById('button').value = "Connect (WebSocket)";
 }
 
 function update_file_status(s) {
@@ -162,7 +166,9 @@ function connect(url) {
             // Pasted data from clipboard will likely contain
             // LF as EOL chars.
             data = data.replace(/\n/g, "\r");
+
             ws.send(data);
+
         });
 
         term.on('title', function(title) {
@@ -249,6 +255,7 @@ function connect(url) {
                 }
             }
             term.write(event.data);
+
         };
     };
 
@@ -363,6 +370,94 @@ document.getElementById('put-file-select').addEventListener('click', function(){
 document.getElementById('put-file-select').addEventListener('change', handle_put_file_select, false);
 document.getElementById('put-file-button').disabled = true;
 
+
+/*
+ * Web Serial API (Google Chrome)
+ *
+ * Useful information used to this implementation:
+ * https://github.com/svendahlstrand/web-serial-api/
+ * https://dev.to/unjavascripter/the-amazing-powers-of-the-web-web-serial-api-3ilc
+ *
+ */
+
+const connectButton = document.getElementById ('SerialConnectButton');
+let port;
+
+if ('serial' in navigator) {
+  connectButton.addEventListener('click', function () {
+    if (port) {
+      term.write('\x1b[31mDisconnected from Serial Port\x1b[m\r\n');
+      port.close();
+      port = undefined;
+      connectButton.innerText = 'Connect (Web USB Serial)';
+
+      document.getElementById('url').disabled = false;
+      document.getElementById('button').disabled = false;
+
+    }
+    else {
+      connectButton.innerText = 'Disconnect';
+      getReader();
+    }
+  });
+
+  connectButton.disabled = false;
+}
+else {
+  const error = document.createElement('p');
+  error.innerHTML = '<p>Support for Serial Web API not enabled. Please enable it using chrome://flags/ and enable "Experimental Web Platform fetures</p>';
+
+}
+
+
+let lineBuffer = '';
+let latestValue = 0;
+
+async function serialWrite(data) {
+	encoder = new TextEncoder();
+	const dataArrayBuffer = encoder.encode(data);
+
+	if (port && port.writable) {
+		const writer = port.writable.getWriter();
+		writer.write(dataArrayBuffer);
+		writer.releaseLock();
+	}
+}
+
+async function getReader() {
+        port = await navigator.serial.requestPort({});
+        await port.open({ baudrate: 115200 });
+
+	document.getElementById('url').disabled = true;
+	document.getElementById('button').disabled = true;
+
+        connectButton.innerText = 'Disconnect';
+        term.write('\x1b[31mConnected using Web Serial API !\x1b[m\r\n');
+
+        const appendStream = new WritableStream({
+          write(chunk) {
+	    term.write(chunk);
+          }
+        });
+
+        port.readable
+          .pipeThrough(new TextDecoderStream())
+          .pipeTo(appendStream);
+
+
+	term.on('data', function(data) {
+            // Pasted data from clipboard will likely contain
+            // LF as EOL chars.
+            //data = data.replace(/\n/g, "\r");
+
+	    //WebSocket
+            //ws.send(data);
+            serialWrite(data);
+
+        });
+
+      }
 </script>
 
 </html>
+
