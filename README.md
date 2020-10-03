@@ -1,4 +1,4 @@
-WebREPL client for MicroPython
+WebREPL client for MicroPython Project
 ==============================
 
 This repository contains the WebREPL client and related tools, for
@@ -23,6 +23,7 @@ confusingly, so it's hard to understand that it applies to WebSocket
 connections. As WebREPL is intended to be used only within a user's
 local network, HTTPS isn't strictly required, and not accessing
 webrepl.html over HTTPS is a suggested workaround.
+
 
 WebREPL file transfer
 ---------------------
