@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 import os
 import struct
+from urllib.parse import urlparse
 try:
     import usocket as socket
 except ImportError:
@@ -185,8 +186,9 @@ def parse_remote(remote):
         fname = "/"
     port = 8266
     if ":" in host:
-        host, port = host.split(":")
-        port = int(port)
+        url = urlparse(host)
+        host = url.hostname
+        port = url.port
     return (host, port, fname)
 
 
