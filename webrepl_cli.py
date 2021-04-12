@@ -171,7 +171,7 @@ def help(rc=0):
     print("  [-p password] <local_file> <host>:<remote_file> - Copy local file to remote file")
     print("Examples:")
     print("  %s script.py 192.168.4.1:/another_name.py" % exename)
-    print("  %s script.py 192.168.4.1:/app/" % exename)
+    print("  %s -p "" script.py 192.168.4.1:/app/" % exename)
     print("  %s -p password 192.168.4.1:/app/script.py ." % exename)
     sys.exit(rc)
 
@@ -201,7 +201,7 @@ def main():
             passwd = sys.argv.pop(i)
             break
 
-    if not passwd:
+    if passwd is None:
         import getpass
         passwd = getpass.getpass()
 
