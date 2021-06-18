@@ -59,13 +59,16 @@
 <body style="background:rgb(255, 255, 255)">
     <section class="d-flex align-items-center justify-content-center" style="min-height:100vh">
         <div class="">
-            <h1 class=" mt-5  text-center text-dark badge text-center"
-                style="font-size: 5vh; letter-spacing: 5px; font-family: Consolas; text-align: center;">
-                <img src="logo.png" style="/*filter: invert(100);*/ height:6vh;" alt="" srcset="">
-                <span class="text-danger">WEBREPL</span> CLIENT
-            </h1>
+            <div class="pt-3 px-3 pb-2 mt-2 justify-content-center d-flex text-white badge  bg-dark shadow">
+                <img src="logo.png" style="filter: invert(100); height:6vh; " alt="" srcset="">
+                <h1
+                    style="font-size: 4vh; letter-spacing: 5px; font-family: Montserrat; text-align: center;padding-left:25px">
+                    WEBREPL CLIENT
+                </h1>
+            </div>
+
             <div style="background:rgb(173, 173, 173)"
-                class="rounded card pt-2 px-1 d-block d-md-flex  text-dark shadow" style="vertical-align:top;">
+                class="rounded card pt-2 px-1 d-block d-md-flex  text-dark shadow-lg" style="vertical-align:top;">
                 <form class=" mb-2 col-md-12 d-md-flex d-block align-items-center">
                     <div class="col-md-4 col-12 pr-md-1 px-1">
                         <div class="form-group">
@@ -80,7 +83,7 @@
                         <div class="form-group ">
                             <input type="text" class="form-control input-group-prepend bg-dark text-white py-2 d-block"
                                 name="get_filename" id="get_filename" value="" size="13" />
-                            <input type="button" style="width:100%" class="btn btn-success input-group-append btn-block"
+                            <input type="button" style="width:100%" class="btn btn-danger input-group-append btn-block"
                                 value="Get from device" onclick="get_file(); return false;" />
                         </div>
                     </div>
@@ -90,7 +93,7 @@
                                 <input type="file" id="put-file-select" class="bg-dark btn text-white py-1">
                             </div>
                             <input type="button" style="width:100%" value="Send to device"
-                                class="btn btn-success btn-block " id="put-file-button"
+                                class="btn btn-danger btn-block " id="put-file-button"
                                 onclick="put_file(); return false;" />
                             <div id="put-file-list"></div>
                         </div>
@@ -109,11 +112,15 @@
 
 
 
-            <div id="footer" class="text-dark">
+            <div id="footer" class="text-dark text-center">&copy;
                 <br clear="both" />
-                <i>Terminal widget should be focused (text cursor visible) to accept input. Click on it if
-                    not.</i><br />
-                <i>To paste, press Ctrl+A, then Ctrl+V</i>
+                <p style="font-style: italic;">
+                    Terminal widget should be focused (text cursor visible) to accept input. Click on it if
+                    not.
+                    <br>
+                    To paste, press Ctrl+A, then Ctrl+V
+                </p>
+
             </div>
         </div>
     </section>
