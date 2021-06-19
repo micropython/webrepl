@@ -175,10 +175,10 @@
         if (window.location.protocol == 'https:') {
             var warningDiv = document.createElement('div');
             warningDiv.style.cssText =
-                'background:#f99;padding:5px;margin-bottom:10px;line-height:1.5em;text-align:center';
+                'background:#222222;padding:30px;margin-bottom:10px;line-height:1.5em;text-align:center;color:#ffffff';
             warningDiv.innerHTML = [
                 'At this time, the WebREPL client cannot be accessed over HTTPS connections.',
-                'Use a HTTP connection, eg. <a href="http://micropython.org/webrepl/">http://micropython.org/webrepl/</a>.',
+                'Use a HTTP connection, eg. <a class="" href="http://micropython.org/webrepl/">http://micropython.org/webrepl/</a>.',
                 'Alternatively, download the files from <a href="https://github.com/micropython/webrepl">GitHub</a> and run them locally.'
             ].join('<br>');
             document.body.insertBefore(warningDiv, document.body.childNodes[0]);
