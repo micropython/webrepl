@@ -56,10 +56,14 @@
 
   <div class="file-box">
     <strong>Send a file</strong>
-    <input type="file" id="put-file-select" />
+    <!-- select files to send -->
+    <input type="file" id="put-file-select" multiple="multiple"/>
     <strong>Destination path</strong>
+    <!-- destination path input -->
     <input type="text" name="set_filepath" id="put_filepath" value="." size="13" />
+    <!-- sent files list update div -->
     <div id="put-file-list"></div>
+    <!-- send to device button -->
     <input type="button" value="Send to device" id="put-file-button" onclick="put_file(); return false;" />
   </div>
 
@@ -90,6 +94,8 @@ var put_file_path = null;
 var put_file_data = null;
 var get_file_name = null;
 var get_file_data = null;
+var put_file_names_list = [];
+var put_files_data_list = [];
 
 function calculate_size(win) {
     var cols = Math.max(80, Math.min(150, (win.innerWidth - 280) / 7)) | 0;
@@ -248,6 +254,8 @@ function connect(url) {
                         console.log('GET_VER', data);
                         binary_state = 0;
                         break;
+                    default:
+                    console.log('default: \nbinary_state ' + binary_state)
                 }
             }
             term.write(event.data);
@@ -273,38 +281,49 @@ function decode_resp(data) {
     }
 }
 
+var counter = 0; 
 function put_file() {
-    var dest_fname = put_file_name;
-    var dest_fpath = document.getElementById('put_filepath').value;
-    var dest_fsize = put_file_data.length;
-    var dest_full_fname = dest_fpath + '/' + dest_fname;
+    setTimeout(function() {
+        if (counter < put_file_names_list.length) {
+            console.log(put_file_names_list[counter], put_files_data_list[counter], counter, put_files_data_list[counter].length)
+            put_file_name = put_file_names_list[counter];
+            put_file_data = put_files_data_list[counter];
 
-    // WEBREPL_FILE = "<2sBBQLH64s"
-    var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
-    rec[0] = 'W'.charCodeAt(0);
-    rec[1] = 'A'.charCodeAt(0);
-    rec[2] = 1; // put
-    rec[3] = 0;
-    rec[4] = 0; rec[5] = 0; rec[6] = 0; rec[7] = 0; rec[8] = 0; rec[9] = 0;
-    rec[10] = 0; rec[11] = 0;
-    rec[12] = dest_fsize & 0xff;
-    rec[13] = (dest_fsize >> 8) & 0xff;
-    rec[14] = (dest_fsize >> 16) & 0xff;
-    rec[15] = (dest_fsize >> 24) & 0xff;
-    rec[16] = dest_full_fname.length & 0xff;
-    rec[17] = (dest_full_fname.length >> 8) & 0xff;
-    for (var i = 0; i < 64; ++i) {
-        if (i < dest_full_fname.length) {
-            rec[18 + i] = dest_full_fname.charCodeAt(i);
-        } else {
-            rec[18 + i] = 0;
+            var dest_fname = put_file_name;
+            var dest_fpath = document.getElementById('put_filepath').value;
+            var dest_fsize = put_file_data.length;
+            var dest_full_fname = dest_fpath + '/' + dest_fname;
+
+            // WEBREPL_FILE = "<2sBBQLH64s"
+            var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
+            rec[0] = 'W'.charCodeAt(0);
+            rec[1] = 'A'.charCodeAt(0);
+            rec[2] = 1; // put
+            rec[3] = 0;
+            rec[4] = 0; rec[5] = 0; rec[6] = 0; rec[7] = 0; rec[8] = 0; rec[9] = 0;
+            rec[10] = 0; rec[11] = 0;
+            rec[12] = dest_fsize & 0xff;
+            rec[13] = (dest_fsize >> 8) & 0xff;
+            rec[14] = (dest_fsize >> 16) & 0xff;
+            rec[15] = (dest_fsize >> 24) & 0xff;
+            rec[16] = dest_full_fname.length & 0xff;
+            rec[17] = (dest_full_fname.length >> 8) & 0xff;
+            for (var i = 0; i < 64; ++i) {
+                if (i < dest_full_fname.length) {
+                    rec[18 + i] = dest_full_fname.charCodeAt(i);
+                } else {
+                    rec[18 + i] = 0;
+                }
+            }
+            // initiate put
+            binary_state = 11;
+            update_file_status('Sending ' + put_file_name + '...');
+            ws.send(rec);
+            counter++;
+            put_file()
         }
-    }
-
-    // initiate put
-    binary_state = 11;
-    update_file_status('Sending ' + put_file_name + '...');
-    ws.send(rec);
+    }, 3000);
+    // counter = 0
 }
 
 function get_file() {
@@ -353,16 +372,28 @@ function handle_put_file_select(evt) {
     // but we only support single file selection at the moment.
     var files = evt.target.files;
 
-    // Get the file info and load its data.
-    var f = files[0];
-    put_file_name = f.name;
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        put_file_data = new Uint8Array(e.target.result);
-        document.getElementById('put-file-list').innerHTML = '' + escape(put_file_name) + ' - ' + put_file_data.length + ' bytes';
-        document.getElementById('put-file-button').disabled = false;
-    };
-    reader.readAsArrayBuffer(f);
+    // addition for multiple file support
+        // setTimeout(setupReader(files[i]), 3000)
+        // console.log('put_file_data', put_file_data)
+    // for (var i = files.length - 1; i >= 0; i--) {
+    for (let i = 0; i < files.length; i++) {
+        // Get the file info and load its data.
+        counter = 0
+        var f = files[i];
+        // put_file_name = f.name;
+        put_file_names_list.push(f.name);
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            // put_file_data = new Uint8Array(e.target.result);
+            put_files_data_list.push(new Uint8Array(e.target.result))
+            // document.getElementById('put-file-list').innerHTML = '' + escape(put_file_name) + ' - ' + put_file_data.length + ' bytes';
+            document.getElementById('put-file-list').innerHTML = '' + escape(put_file_names_list[i]) + ' - ' + put_files_data_list[i].length + ' bytes';
+            document.getElementById('put-file-button').disabled = false;
+        };
+        reader.readAsArrayBuffer(f);
+    }
+    // console.log(put_file_names_list)
+    // console.log(put_files_data_list)
 }
 
 document.getElementById('put-file-select').addEventListener('click', function(){
