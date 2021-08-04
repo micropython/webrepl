@@ -255,7 +255,7 @@ function connect(url) {
                         binary_state = 0;
                         break;
                     default:
-                    console.log('default: \nbinary_state ' + binary_state)
+                        console.log('default: \nbinary_state ' + binary_state)
                 }
             }
             term.write(event.data);
@@ -281,49 +281,57 @@ function decode_resp(data) {
     }
 }
 
-var counter = 0; 
+var counter = 0;
+var delayTime = 0;
+
 function put_file() {
-    setTimeout(function() {
-        if (counter < put_file_names_list.length) {
-            console.log(put_file_names_list[counter], put_files_data_list[counter], counter, put_files_data_list[counter].length)
-            put_file_name = put_file_names_list[counter];
-            put_file_data = put_files_data_list[counter];
+      setTimeout(function() {
+        put_file_name = put_file_names_list[counter];
+        put_file_data = put_files_data_list[counter];
+        delayTime = Math.floor(put_file_data.length/2);
+        console.log(counter, delayTime)
 
-            var dest_fname = put_file_name;
-            var dest_fpath = document.getElementById('put_filepath').value;
-            var dest_fsize = put_file_data.length;
-            var dest_full_fname = dest_fpath + '/' + dest_fname;
+        var dest_fname = put_file_name;
+        var dest_fpath = document.getElementById('put_filepath').value;
+        var dest_fsize = put_file_data.length;
+        var dest_full_fname = dest_fpath + '/' + dest_fname;
 
-            // WEBREPL_FILE = "<2sBBQLH64s"
-            var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
-            rec[0] = 'W'.charCodeAt(0);
-            rec[1] = 'A'.charCodeAt(0);
-            rec[2] = 1; // put
-            rec[3] = 0;
-            rec[4] = 0; rec[5] = 0; rec[6] = 0; rec[7] = 0; rec[8] = 0; rec[9] = 0;
-            rec[10] = 0; rec[11] = 0;
-            rec[12] = dest_fsize & 0xff;
-            rec[13] = (dest_fsize >> 8) & 0xff;
-            rec[14] = (dest_fsize >> 16) & 0xff;
-            rec[15] = (dest_fsize >> 24) & 0xff;
-            rec[16] = dest_full_fname.length & 0xff;
-            rec[17] = (dest_full_fname.length >> 8) & 0xff;
-            for (var i = 0; i < 64; ++i) {
-                if (i < dest_full_fname.length) {
-                    rec[18 + i] = dest_full_fname.charCodeAt(i);
-                } else {
-                    rec[18 + i] = 0;
-                }
+        // WEBREPL_FILE = "<2sBBQLH64s"
+        var rec = new Uint8Array(2 + 1 + 1 + 8 + 4 + 2 + 64);
+        rec[0] = 'W'.charCodeAt(0);
+        rec[1] = 'A'.charCodeAt(0);
+        rec[2] = 1; // put
+        rec[3] = 0;
+        rec[4] = 0; rec[5] = 0; rec[6] = 0; rec[7] = 0; rec[8] = 0; rec[9] = 0;
+        rec[10] = 0; rec[11] = 0;
+        rec[12] = dest_fsize & 0xff;
+        rec[13] = (dest_fsize >> 8) & 0xff;
+        rec[14] = (dest_fsize >> 16) & 0xff;
+        rec[15] = (dest_fsize >> 24) & 0xff;
+        rec[16] = dest_full_fname.length & 0xff;
+        rec[17] = (dest_full_fname.length >> 8) & 0xff;
+        for (var i = 0; i < 64; ++i) {
+            if (i < dest_full_fname.length) {
+                rec[18 + i] = dest_full_fname.charCodeAt(i);
+            } else {
+                rec[18 + i] = 0;
             }
-            // initiate put
-            binary_state = 11;
-            update_file_status('Sending ' + put_file_name + '...');
-            ws.send(rec);
-            counter++;
+        }
+        // initiate put
+        binary_state = 11;
+        update_file_status('Sending ' + put_file_name + '...');
+        ws.send(rec);
+
+        counter++;
+        if(counter < put_file_names_list.length){
             put_file()
         }
-    }, 3000);
-    // counter = 0
+        else if(counter == put_file_names_list.length){
+            counter = 0
+            delayTime = 0
+        }
+
+      }, delayTime);
 }
 
 function get_file() {
@@ -373,12 +381,8 @@ function handle_put_file_select(evt) {
     var files = evt.target.files;
 
     // addition for multiple file support
-        // setTimeout(setupReader(files[i]), 3000)
-        // console.log('put_file_data', put_file_data)
-    // for (var i = files.length - 1; i >= 0; i--) {
     for (let i = 0; i < files.length; i++) {
         // Get the file info and load its data.
-        counter = 0
         var f = files[i];
         // put_file_name = f.name;
         put_file_names_list.push(f.name);
@@ -388,16 +392,19 @@ function handle_put_file_select(evt) {
             put_files_data_list.push(new Uint8Array(e.target.result))
             // document.getElementById('put-file-list').innerHTML = '' + escape(put_file_name) + ' - ' + put_file_data.length + ' bytes';
             document.getElementById('put-file-list').innerHTML = '' + escape(put_file_names_list[i]) + ' - ' + put_files_data_list[i].length + ' bytes';
-            document.getElementById('put-file-button').disabled = false;
+            if(i === files.length-1){
+                document.getElementById('put-file-button').disabled = false;
+            }
         };
         reader.readAsArrayBuffer(f);
     }
-    // console.log(put_file_names_list)
-    // console.log(put_files_data_list)
 }
 
 document.getElementById('put-file-select').addEventListener('click', function(){
     this.value = null;
+    document.getElementById('put-file-button').disabled = true;
+    put_file_names_list = []
+    put_files_data_list = []
 }, false);
 
 document.getElementById('put-file-select').addEventListener('change', handle_put_file_select, false);
