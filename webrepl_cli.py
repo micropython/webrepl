@@ -7,7 +7,6 @@ try:
     import usocket as socket
 except ImportError:
     import socket
-import websocket_helper
 
 # Define to 1 to use builtin "uwebsocket" module of MicroPython
 USE_BUILTIN_UWEBSOCKET = 0
@@ -190,6 +189,28 @@ def parse_remote(remote):
     return (host, port, fname)
 
 
+# Very simplified client handshake, works for MicroPython's
+# websocket server implementation, but probably not for other
+# servers.
+def client_handshake(sock):
+    cl = sock.makefile("rwb", 0)
+    cl.write(b"""\
+GET / HTTP/1.1\r
+Host: echo.websocket.org\r
+Connection: Upgrade\r
+Upgrade: websocket\r
+Sec-WebSocket-Key: foo\r
+\r
+""")
+    l = cl.readline()
+#    print(l)
+    while 1:
+        l = cl.readline()
+        if l == b"\r\n":
+            break
+#        sys.stdout.write(l)
+
+
 def main():
     if len(sys.argv) not in (3, 5):
         help(1)
@@ -236,7 +257,7 @@ def main():
 
     s.connect(addr)
     #s = s.makefile("rwb")
-    websocket_helper.client_handshake(s)
+    client_handshake(s)
 
     ws = websocket(s)
 
