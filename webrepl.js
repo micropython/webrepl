@@ -16,9 +16,11 @@ function calculate_size(win) {
 (function() {
     window.onload = function() {
       var url = window.location.hash.substring(1);
-      if (url) {
-        document.getElementById('url').value = 'ws://' + url;
+      if (!url) {
+          // pre-populate the url based on the host that served this page.
+          url = document.location.host;
       }
+      document.getElementById('url').value = 'ws://' + url;
       var size = calculate_size(self);
       term = new Terminal({
         cols: size[0],
@@ -41,9 +43,8 @@ function show_https_warning() {
         var warningDiv = document.createElement('div');
         warningDiv.style.cssText = 'background:#f99;padding:5px;margin-bottom:10px;line-height:1.5em;text-align:center';
         warningDiv.innerHTML = [
-            'At this time, the WebREPL client cannot be accessed over HTTPS connections.',
-            'Use a HTTP connection, eg. <a href="http://micropython.org/webrepl/">http://micropython.org/webrepl/</a>.',
-            'Alternatively, download the files from <a href="https://github.com/micropython/webrepl">GitHub</a> and run them locally.'
+            'The WebREPL client cannot be accessed over HTTPS connections.',
+            'Load the WebREPL client from the device instead.'
         ].join('<br>');
         document.body.insertBefore(warningDiv, document.body.childNodes[0]);
         term.resize(term.cols, term.rows - 7);
@@ -71,7 +72,12 @@ function update_file_status(s) {
 }
 
 function connect(url) {
-    window.location.hash = url.substring(5);
+    var hostport = url.substring(5);
+    if (hostport === document.location.host) {
+        hostport = '';
+    }
+
+    window.location.hash = hostport;
     ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
     ws.onopen = function() {
