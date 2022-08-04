@@ -167,7 +167,7 @@ def help(rc=0):
     print("%s - Perform remote file operations using MicroPython WebREPL protocol" % exename)
     print("Arguments:")
     print("  [-p password] <host>:<remote_file> <local_file> - Copy remote file to local file")
-    print("  [-p password] <local_file> <host>:<remote_file> - Copy local file to remote file")
+    print("  [-p password] [-r/--reset] <local_file> <host>:<remote_file> - Copy local file to remote file and optionally reset after")
     print("Examples:")
     print("  %s script.py 192.168.4.1:/another_name.py" % exename)
     print("  %s script.py 192.168.4.1:/app/" % exename)
@@ -212,7 +212,7 @@ Sec-WebSocket-Key: foo\r
 
 
 def main():
-    if len(sys.argv) not in (3, 5):
+    if len(sys.argv) not in (3, 4, 5, 6):
         help(1)
 
     passwd = None
@@ -220,6 +220,12 @@ def main():
         if sys.argv[i] == '-p':
             sys.argv.pop(i)
             passwd = sys.argv.pop(i)
+            break
+    do_reset = False
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == '--reset' or sys.argv[i] == '-r' :
+            sys.argv.pop(i)
+            do_reset = True
             break
 
     if not passwd:
@@ -271,6 +277,18 @@ def main():
         get_file(ws, dst_file, src_file)
     elif op == "put":
         put_file(ws, src_file, dst_file)
+        if do_reset:
+            print('Resetting...')
+            # ws.write only sends binary data, so we need to instead send the
+            # appropriate header for "text" data to send control characters
+            text_hdr = struct.pack(">BB", 0x81, 1)
+            s.send(text_hdr)
+            s.send(b'\x03')  #ctrl-c to interrupt whatever might be happening
+            #print(s.recv(1000))
+            s.send(text_hdr)
+            s.send(b'\x04')  #ctrl-d
+            #print(s.recv(1000))
+
 
     s.close()
 
