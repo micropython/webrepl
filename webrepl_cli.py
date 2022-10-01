@@ -40,9 +40,9 @@ else:
             l = len(data)
             if l < 126:
                 # TODO: hardcoded "binary" type
-                hdr = struct.pack(">BB", 0x80+OpCode, l)
+                hdr = struct.pack(">BB", 0x80 + OpCode, l)
             else:
-                hdr = struct.pack(">BBH", 0x80+OpCode, 126, l)
+                hdr = struct.pack(">BBH", 0x80 + OpCode, 126, l)
             self.s.send(hdr)
             self.s.send(data)
 
@@ -90,9 +90,9 @@ else:
 
 def login(ws, passwd):
     while True:
-        c = ws.read(1, text_ok=True)
+        c = ws.read(1, text_ok = True)
         if c == b":":
-            assert ws.read(1, text_ok=True) == b" "
+            assert ws.read(1, text_ok = True) == b" "
             break
     ws.write(passwd.encode("utf-8") + b"\r")
 
@@ -176,6 +176,7 @@ def help(rc=0):
         '    --passwd pw    Set the login password\n'
         '    --host host    Set the host when using commands\n'
         '    --cmd cmd      Execute the command cmd in the server\n'
+        '    --verbose, -v  Set verbose\n'
 
         'File copy:\n'
 
@@ -188,9 +189,33 @@ def help(rc=0):
         '  {exename} 192.168.4.1:/app/script.py\n'
 
         '\n'
-        .format(exename=exename))
+        .format(exename = exename))
 
     sys.exit(rc)
+
+def query_response(ws, cmd, verbose=False):
+    '''Single line query to single line response. May be used as rpc'''
+#    ws.write((cmd+'\r').encode(), frame=WEBREPL_FRAME_TXT)
+    ws.write((cmd+'\r').encode(), text=True)
+    if verbose:
+      print(cmd)
+
+    if '\r' in cmd or '\n' in cmd:
+      raise runtime_error('Currently no support for multi line queries!')
+
+    Response = b''
+    while True:
+      c = ws.read(1, text_ok = True)
+      Response += c
+
+      # Finish on prompt
+      if Response[-5:]==b'\n>>> ':
+        break
+
+    # Cleanup the response and return it
+    return (Response[Response.index(b'\n')+1:-6]  # Get rid of input line
+            .decode()                             # decode into python string
+            .replace('\r',''))                    # Get rid of \r
 
 def error(msg):
     print(msg)
@@ -228,12 +253,61 @@ Sec-WebSocket-Key: foo\r
             break
 #        sys.stdout.write(l)
 
+# A class for communicating with the esp8266
+class WebreplCLI:
+    def __init__(self,
+                 host = '192.168.0.1',
+                 port = 8266,
+                 verbose = False,
+                 password = 'esp8266',
+                 dont_connect = False):
+        self.host = host
+        self.port = port
+        self.verbose = verbose
+        self.password = password
+        if not dont_connect:
+            self.connect()
 
+    def connect(self):
+        self.s = socket.socket()
+    
+        ai = socket.getaddrinfo(self.host, self.port)
+        addr = ai[0][4]
+    
+        self.s.connect(addr)
+        #s = s.makefile("rwb")
+        client_handshake(self.s)
+    
+        self.ws = websocket(self.s)
+    
+        login(self.ws, self.password)
+        ver = get_ver(self.ws)
+        if self.verbose:
+            print("Remote WebREPL version:", ver)
+    
+        # Set websocket to send data marked as "binary"
+        self.ws.ioctl(9, 2)
+        if self.verbose:
+            print('Connected')
+
+    def close(self):
+        self.s.close()
+
+    def command(self, cmd):
+        return query_response(self.ws, cmd)
+
+    def get_file(self, local_file, remote_file):
+        return get_file(self.ws, local_file, remote_file)
+
+    def put_file(self, local_file, remote_file):
+        return put_file(self.ws, local_file, remote_file)
+            
 def main():
     passwd = None
     cmd = None
     host = '192.168.0.1'
     port = 8266
+    verbose = False
 
     argp = 1
     while argp < len(sys.argv) and sys.argv[argp][0] == '-':
@@ -293,36 +367,25 @@ def main():
         if host is None:
             error('Must specify port for executing commands!')
 
-    s = socket.socket()
-
-    ai = socket.getaddrinfo(host, port)
-    addr = ai[0][4]
-
-    s.connect(addr)
-    #s = s.makefile("rwb")
-    client_handshake(s)
-
-    ws = websocket(s)
-
     if passwd is None:
       import getpass
       passwd = getpass.getpass()
 
-    login(ws, passwd)
-    print("Remote WebREPL version:", get_ver(ws))
-
-    # Set websocket to send data marked as "binary"
-    ws.ioctl(9, 2)
+    wc = WebreplCLI(host = host,
+                    port = port,
+                    password = passwd,
+                    verbose = verbose)
 
     if cmd is not None:
-        ws.write(cmd+'\r', text=True)
-    else:
-      if op == "get":
-          get_file(ws, dst_file, src_file)
-      elif op == "put":
-          put_file(ws, src_file, dst_file)
-    s.close()
+        res = wc.command(cmd)
+        if res:
+          print(res)
+    elif op == "get":
+       wc.get_file(dst_file, src_file)
+    elif op == "put":
+       wc.put_file(src_file, dst_file)
 
+    wc.close()
 
 if __name__ == "__main__":
     main()
