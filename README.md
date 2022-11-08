@@ -6,12 +6,19 @@ accessing a MicroPython REPL (interactive prompt) over WebSockets.
 
 To start WebREPL terminal client, clone or download this repository
 (in full) and open webrepl.html in a browser. Recent versions of
-Firefox and Chrome (or Chromium) are supported.
+Firefox, Chrome (or Chromium) and Edge are supported.
 
 The latest version of the client is also hosted online at
 http://micropython.org/webrepl (note: while it's hosted online,
 all interaction with your boards still happen locally in your
 own network).
+
+It is possible to include the IP or FQDN of the device to connect as
+part of the url as a fragment. Add `/#<address>:<port>` to the webrepl url. Do not include the initial 'ws://', 
+however the port needs to be specified. 
+ - `http://micropython.org/webrepl/#<fqdn or ip>:<port>/`
+ - `http://micropython.org/webrepl/#192.168.4.123:8266/`
+ - `http://micropython.org/webrepl/#micropython.local:8266`
 
 At this time, WebREPL client cannot be accessed over HTTPS connections.
 This is due to not widely published policy that HTTPS pages may
