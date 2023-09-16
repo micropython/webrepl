@@ -1,16 +1,20 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
+<link rel="preload" href="term.js" as="script" />
+<link rel="preload" href="FileSaver.js" as="script" />
 <title>MicroPython WebREPL</title>
 <link rel="stylesheet" href="webrepl.css">
+<meta name="theme-color" content="#555555" />
 <script src="term.js"></script>
 <script src="FileSaver.js"></script>
+<script defer src="webrepl.js"></script>
 </head>
 <body>
 
 <div style="display:inline-block; vertical-align:top;">
 <form>
-<input type="text" name="webrepl_url" id="url" value="" />
+<input type="text" inputmode="url" name="webrepl_url" id="url" value="" />
 <input type="submit" id="button" value="Connect" onclick="button_click(); return false;" />
 </form>
 <div id="term">
@@ -38,9 +42,8 @@
 
 <br clear="both" />
 <i>Terminal widget should be focused (text cursor visible) to accept input. Click on it if not.</i><br/>
-<i>To paste, press Ctrl+A, then Ctrl+V</i>
+<i>To paste, press <kbd>Ctrl+A</kbd>, then <kbd>Ctrl+V</kbd></i>
 </body>
 
-<script src="webrepl.js"></script>
 
 </html>
