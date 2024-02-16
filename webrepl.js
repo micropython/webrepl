@@ -81,15 +81,14 @@ function connect(url) {
     ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
     ws.onopen = function() {
-        term.removeAllListeners('data');
-        term.on('data', function(data) {
+        term.onData(function(data) {
             // Pasted data from clipboard will likely contain
             // LF as EOL chars.
             data = data.replace(/\n/g, "\r");
             ws.send(data);
         });
 
-        term.on('title', function(title) {
+        term.onTitleChange(function(title) {
             document.title = title;
         });
 
@@ -181,7 +180,6 @@ function connect(url) {
         if (term) {
             term.write('\x1b[31mDisconnected\x1b[m\r\n');
         }
-        term.off('data');
         prepare_for_connect();
     }
 }
