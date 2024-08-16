@@ -202,6 +202,92 @@ def put_file(ws, local_file, remote_file):
     print()
     assert read_resp(ws) == 0
 
+
+def run_command(ws, command):
+    """
+    Sends a command to the MicroPython device via WebREPL and waits for the response.
+
+    :param ws: WebSocket connection object.
+    :param command: Command to be executed on the MicroPython device, as a byte string.
+    :return: True if the command was successful, False otherwise.
+    """
+
+    ws.write(command, WEBREPL_FRAME_TXT)
+
+    # Command echo handling
+    for i in range(len(command)):
+        ws.read(1, text_ok=True)
+
+    # Reading the result and checking if the REPL is ready again
+    result = [ws.read(1, text_ok=True) for i in range(4)]
+    if b''.join(result) == b">>> ":
+        return True
+    else:
+        # If the initial check failed, read until we get the prompt ">>> "
+        while b''.join(result[-4:]) != b">>> ":
+            c = ws.read(1, text_ok=True)
+            result.append(c)
+        return False
+
+
+def create_directory(ws, dir_path):
+    """
+    Creates a directory on the MicroPython device via WebREPL.
+
+    :param ws: WebSocket connection object.
+    :param dir_path: Path of the directory to create on the device.
+    :return: True if the directory was successfully created, False otherwise.
+    """
+
+    command = ("os.mkdir('%s')\r\n" % dir_path).encode("utf-8")
+    success = run_command(ws, command)
+    return success
+
+
+def put_dir(ws, local_dir, remote_dir):
+    """
+    Recursively uploads a local directory and its contents to the MicroPython device.
+
+    :param ws: WebSocket connection object.
+    :param local_dir: Path to the local directory to upload.
+    :param remote_dir: Path on the device where the directory should be created.
+    """
+
+    # Importing os module on the device
+    if not run_command(ws, "import os\r\n".encode("utf-8")):
+        return
+
+    # Create the root directory on the device
+    basename = os.path.basename(local_dir)
+    remote_dir = os.path.join(remote_dir, basename).replace("\\", "/")
+
+    print("Creating root directory: %s" % remote_dir)
+    if not create_directory(ws, remote_dir):
+        return
+
+    # Walk through the local directory structure
+    for root, dirs, files in os.walk(local_dir):
+        # Determine the remote path for the current directory
+        rel_path = os.path.relpath(root, local_dir)
+        dst_dir_root = os.path.join(remote_dir, rel_path).replace("\\", "/") if rel_path != '.' else remote_dir
+
+        # Create subdirectories on the device
+        for dir_name in dirs:
+            dst_dir = os.path.join(dst_dir_root, dir_name).replace("\\", "/")
+
+            print("Creating directory: %s" % dst_dir)
+            if not create_directory(ws, dst_dir):
+                print("Error creating directory %s" % dst_dir)
+                return
+
+        # Upload files in the current directory
+        for file in files:
+            local_file = os.path.join(root, file)
+            remote_file = os.path.join(dst_dir_root, file).replace("\\", "/")
+            print("Uploading file: %s -> %s" % (local_file, remote_file))
+            put_file(ws, local_file, remote_file)
+
+
 def get_file(ws, local_file, remote_file):
     src_fname = (SANDBOX + remote_file).encode("utf-8")
     rec = struct.pack(WEBREPL_REQ_S, b"WA", WEBREPL_GET_FILE, 0, 0, 0, len(src_fname), src_fname)
@@ -237,7 +323,7 @@ def help(rc=0):
     print("Arguments:")
     print("  [-p password] <host>                            - Access the remote REPL")
     print("  [-p password] <host>:<remote_file> <local_file> - Copy remote file to local file")
-    print("  [-p password] <local_file> <host>:<remote_file> - Copy local file to remote file")
+    print("  [-p password] <local_path> <host>:<remote_path> - Copy local file or directory to remote path")
     print("Examples:")
     print("  %s 192.168.4.1" % exename)
     print("  %s script.py 192.168.4.1:/another_name.py" % exename)
@@ -315,16 +401,15 @@ def main():
             dst_file += "/" + basename
     else:
         op = "put"
-        host, port, dst_file = parse_remote(sys.argv[2])
-        src_file = sys.argv[1]
-        if dst_file[-1] == "/":
-            basename = src_file.rsplit("/", 1)[-1]
-            dst_file += basename
+        host, port, dst_path = parse_remote(sys.argv[2])
+        src_path = sys.argv[1]
 
     if True:
         print("op:%s, host:%s, port:%d, passwd:%s." % (op, host, port, passwd))
-        if op in ("get", "put"):
+        if op == "get":
             print(src_file, "->", dst_file)
+        elif op == "put":
+            print(src_path, "->", dst_path)
 
     s = socket.socket()
 
@@ -348,7 +433,15 @@ def main():
     elif op == "get":
         get_file(ws, dst_file, src_file)
     elif op == "put":
-        put_file(ws, src_file, dst_file)
+        if os.path.isfile(src_path):
+            if dst_path[-1] == "/":
+                basename = src_path.rsplit("/", 1)[-1]
+                dst_path += basename
+            print("Uploading file...")
+            put_file(ws, src_path, dst_path)
+        elif os.path.isdir(src_path):
+            print("Uploading directory...")
+            put_dir(ws, src_path, dst_path)
 
     s.close()
 
